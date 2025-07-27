@@ -1087,7 +1087,7 @@
                 <div id="suggestions"></div>
             </div>
             <div class="input-container">
-                <input type="text" id="vehicleInput" placeholder="Enter Vehicle Number" oninput="showVehicleSuggestions(); toggleVehicleClearButton();" autocomplete="off" />
+                <input type="text" id="vehicleInput" placeholder="Enter Vehicle Number" oninput="showVehicleSuggestions(); toggleVehicleClearButton(); toggleModalAddButton();" autocomplete="off" />
                 <div id="vehicleSuggestions"></div>
             </div>
             
@@ -1100,7 +1100,10 @@
             <div class="button-row">
                 <button class="third-width" id="saveBtn" onclick="saveVehicleCoils()">Save</button>
                 <button class="third-width" id="generateBtn" onclick="generateTextFile()" disabled>Generate Text</button>
-                <button class="third-width clear-button" id="clearVehicleBtn" onclick="clearVehicleInput()" style="display: none;">Clear Vehicle</button>
+                <button class="third-width" onclick="closeApplication()" style="background-color: #e74c3c;">Close App</button>
+            </div>
+            <div class="button-row" id="clearVehicleRow" style="display: none;">
+                <button class="full-width clear-button" id="clearVehicleBtn" onclick="clearVehicleInput()">Clear Vehicle</button>
             </div>
             
             <div id="reader" ondblclick="closeScanner()"></div>
@@ -1137,7 +1140,7 @@
             <div id="sheetsContent" style="display: none;">
                 <input type="text" id="spreadsheetId" placeholder="Google Sheets ID or URL" value="https://docs.google.com/spreadsheets/d/18VjUGZ-dGFMEq1oIlxIssRlwkfcPZZJfH6GD7UdgOyc/edit?usp=sharing" />
                 <input type="text" id="apiKey" placeholder="Google API Key (for reading data)" />
-                <input type="text" id="webAppUrl" placeholder="Google Apps Script Web App URL (for writing data)" value="https://script.google.com/macros/s/AKfycbx9KYWooFcK_35P9iBpYRW-Ql2jMc2EmxbaI6siyxM1Vkqnpoay-6O-V4K8BX7TFrbt/exec" />
+                <input type="text" id="webAppUrl" placeholder="Google Apps Script Web App URL (for writing data)" value="https://script.google.com/macros/s/AKfycbyc5XDyRgzEqwNltu7a8wGOmtPWPkAQff8hKuyc30TD2WXTdal5UV4MlXpAnK-NBDbR/exec" />
                 <div class="button-row">
                     <button class="half-width" onclick="loadDataFromGoogleSheets()" style="background-color: #27ae60;" id="loadSheetsBtn">Load Data</button>
                     <button class="half-width" onclick="resetApp()">Reset App</button>
@@ -1169,7 +1172,10 @@
         <div class="coil-modal-content">
             <div class="coil-modal-header">
                 <h3 id="coilModalTitle">Coil Details</h3>
-                <button class="coil-modal-close-btn" onclick="closeCoilModal()">Close</button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="coil-modal-close-btn" id="modalAddBtn" onclick="addCoilToVehicleFromModal();" style="background: linear-gradient(45deg, #27ae60, #229954);" disabled>Add Coil</button>
+                    <button class="coil-modal-close-btn" onclick="closeCoilModal()">Close</button>
+                </div>
             </div>
             <div class="coil-modal-body" id="coilModalBody">
                 <!-- Coil details will be displayed here -->
@@ -2191,7 +2197,7 @@ Data is currently saved locally and will sync once Web App is configured.`);
             try {
                 // Auto-configure Google API key and Web App URL from environment
                 const apiKeyFromEnv = 'AIzaSyCpDuukRyxNbcOXQ02WrQq9GyCOXFP_9fM';
-                const webAppUrlFromEnv = 'https://script.google.com/macros/s/AKfycbx9KYWooFcK_35P9iBpYRW-Ql2jMc2EmxbaI6siyxM1Vkqnpoay-6O-V4K8BX7TFrbt/exec';
+                const webAppUrlFromEnv = 'https://script.google.com/macros/s/AKfycbyc5XDyRgzEqwNltu7a8wGOmtPWPkAQff8hKuyc30TD2WXTdal5UV4MlXpAnK-NBDbR/exec';
                 
                 if (apiKeyFromEnv && !apiKeyFromEnv.includes('${') && apiKeyFromEnv.length > 10) {
                     console.log('Setting Google API key from environment');
@@ -2266,6 +2272,9 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 
                 // Update Google Sheets button status
                 updateGoogleSheetsButtonStatus();
+                
+                // Initialize modal add button state
+                toggleModalAddButton();
                 
                 console.log('App initialization complete');
                 
@@ -2579,14 +2588,22 @@ Data is currently saved locally and will sync once Web App is configured.`);
         }
 
         function closeCoilModal() {
+            console.log('closeCoilModal called');
             const modal = document.getElementById('coilModal');
             
+            if (!modal) {
+                console.error('coilModal element not found');
+                return;
+            }
+            
+            console.log('Modal found, closing...');
             modal.classList.remove('show');
             modal.style.opacity = '0';
             
             setTimeout(() => {
                 modal.style.display = 'none';
                 modal.style.visibility = 'hidden';
+                console.log('Modal closed completely');
             }, 300);
         }
 
@@ -2734,13 +2751,30 @@ Data is currently saved locally and will sync once Web App is configured.`);
             document.getElementById('vehicleInput').value = vehicleNumber;
             document.getElementById('vehicleSuggestions').style.display = 'none';
             toggleVehicleClearButton();
+            toggleModalAddButton();
         }
 
         function toggleVehicleClearButton() {
             const input = document.getElementById('vehicleInput').value.trim();
-            const clearBtn = document.getElementById('clearVehicleBtn');
-            if (clearBtn) {
-                clearBtn.style.display = input ? 'block' : 'none';
+            const clearVehicleRow = document.getElementById('clearVehicleRow');
+            if (clearVehicleRow) {
+                clearVehicleRow.style.display = input ? 'block' : 'none';
+            }
+        }
+
+        function toggleModalAddButton() {
+            const vehicleInput = document.getElementById('vehicleInput').value.trim();
+            const modalAddBtn = document.getElementById('modalAddBtn');
+            if (modalAddBtn) {
+                modalAddBtn.disabled = !vehicleInput;
+                // Update button appearance based on state
+                if (vehicleInput) {
+                    modalAddBtn.style.opacity = '1';
+                    modalAddBtn.style.cursor = 'pointer';
+                } else {
+                    modalAddBtn.style.opacity = '0.5';
+                    modalAddBtn.style.cursor = 'not-allowed';
+                }
             }
         }
 
@@ -2748,6 +2782,7 @@ Data is currently saved locally and will sync once Web App is configured.`);
             document.getElementById('vehicleInput').value = '';
             document.getElementById('vehicleSuggestions').style.display = 'none';
             toggleVehicleClearButton();
+            toggleModalAddButton();
         }
 
         async function showCoilSerialSuggestions() {
@@ -2895,6 +2930,57 @@ Data is currently saved locally and will sync once Web App is configured.`);
             showMessage('Coil added to vehicle successfully', 'success');
         }
 
+        function addCoilToVehicleFromModal() {
+            console.log('addCoilToVehicleFromModal called');
+            const vehicleInput = document.getElementById('vehicleInput');
+            const coilInput = document.getElementById('coilInput');
+            
+            vehicleInput.disabled = true;
+            
+            const coil = coilInput.value.trim().toUpperCase();
+            const vehicle = vehicleInput.value.trim().toUpperCase();
+            
+            if (!coil || !vehicle) {
+                showMessage('Please enter both coil and vehicle number', 'error');
+                vehicleInput.disabled = false;
+                return;
+            }
+            
+            // Check if coil is already saved in vehicleCoilMap
+            let coilAlreadySaved = false;
+            for (const [savedVehicle, savedCoils] of Object.entries(vehicleCoilMap)) {
+                if (savedCoils.includes(coil)) {
+                    showMessage(`⚠️ WARNING: Coil ${coil} is already saved for vehicle ${savedVehicle}`, 'error');
+                    vehicleInput.disabled = false;
+                    return;
+                }
+            }
+            
+            // Check if coil is already added in current session
+            const coilAlreadyAdded = addedCoils.some(item => item.coilNumber === coil);
+            if (coilAlreadyAdded) {
+                showMessage(`⚠️ WARNING: Coil ${coil} is already added to the current list`, 'error');
+                vehicleInput.disabled = false;
+                return;
+            }
+            
+            addedCoils.push({ coilNumber: coil, vehicleNumber: vehicle });
+            updateAddedCoilsDisplay();
+            
+            coilInput.value = '';
+            const resultElement = document.getElementById('result');
+            if (resultElement) {
+                resultElement.innerHTML = '';
+            }
+            document.getElementById('suggestions').style.display = 'none';
+            
+            showMessage('Coil added to vehicle successfully', 'success');
+            
+            // Close the modal when called from modal Add Coil button
+            console.log('Calling closeCoilModal from addCoilToVehicleFromModal');
+            closeCoilModal();
+        }
+
         function updateAddedCoilsDisplay() {
             const div = document.getElementById('addedCoils');
             if (addedCoils.length === 0) {
@@ -2935,28 +3021,8 @@ Data is currently saved locally and will sync once Web App is configured.`);
         }
 
         function updateVehicleCountDisplay() {
-            const vehicleCount = Object.keys(vehicleCoilMap).length;
-            const totalCoils = Object.values(vehicleCoilMap).reduce((sum, coils) => sum + coils.length, 0);
-            
-            let countDisplay = document.getElementById('vehicleCountDisplay');
-            if (!countDisplay) {
-                countDisplay = document.createElement('div');
-                countDisplay.id = 'vehicleCountDisplay';
-                countDisplay.className = 'vehicle-count';
-                
-                // Insert after the addedCoils div
-                const addedCoilsDiv = document.getElementById('addedCoils');
-                if (addedCoilsDiv) {
-                    addedCoilsDiv.parentNode.insertBefore(countDisplay, addedCoilsDiv.nextSibling);
-                }
-            }
-            
-            countDisplay.innerHTML = `
-                <div style="text-align: center; font-size: 16px; margin: 10px 0;">
-                    <strong>Shipment Summary:</strong><br>
-                    Vehicles Used: ${vehicleCount} | Total Coils: ${totalCoils} | Current Group: ${currentGroupNumber}
-                </div>
-            `;
+            // This function is kept for compatibility but no longer displays summary in main window
+            console.log('Vehicle count display updated (summary moved to top)');
         }
 
         async function saveVehicleCoils() {
@@ -3292,9 +3358,30 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 // Hide clear vehicle button
                 toggleVehicleClearButton();
                 
+                // Update shipment summary immediately after saving
+                setTimeout(() => {
+                    updateShipmentSummary();
+                }, 500); // Small delay to ensure all data is processed
+                
             } catch (error) {
                 console.error('Error saving vehicle coils:', error);
                 showMessage('Error saving vehicle coils: ' + error.message, 'error');
+            }
+        }
+
+        // Function to close the application
+        function closeApplication() {
+            if (confirm('Are you sure you want to close the application?')) {
+                // Clear any temporary data if needed
+                console.log('Closing Coil PNR application');
+                
+                // For web browsers, close the current window/tab
+                if (window.close) {
+                    window.close();
+                } else {
+                    // If window.close doesn't work (some browsers block it), redirect to a blank page
+                    window.location.href = 'about:blank';
+                }
             }
         }
 
@@ -5528,6 +5615,7 @@ Data is currently saved locally and will sync once Web App is configured.`);
             document.getElementById('coilInput').value = '';
             document.getElementById('suggestions').style.display = 'none';
             toggleClearButton();
+            toggleModalAddButton();
             // Close coil modal if it's open
             const modal = document.getElementById('coilModal');
             if (modal && modal.classList.contains('show')) {
