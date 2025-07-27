@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coil-checker-v4-2';
+const CACHE_NAME = 'coil-pnr-v4-2';
 const urlsToCache = [
   './',
   './index.html',
