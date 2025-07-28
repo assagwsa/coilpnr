@@ -1856,7 +1856,11 @@
                                 const forceJSONP = localStorage.getItem('forceJSONP') === 'true';
                                 console.log('Force JSONP mode:', forceJSONP);
                                 
-                                if (isAPK || forceJSONP) {
+                                // For Chrome APK, always use JSONP as primary method since pixel method fails
+                                const useJSONP = isAPK || forceJSONP || navigator.userAgent.includes('wv') || window.location.protocol === 'file:';
+                                console.log('Using JSONP method:', useJSONP);
+                                
+                                if (useJSONP) {
                                     // For Chrome APK/WebView: Use JSONP callback method which is more reliable
                                     console.log('Chrome APK/WebView detected - using JSONP callback method');
                                     
@@ -4146,26 +4150,48 @@ Data is currently saved locally and will sync once Web App is configured.`);
         // Enhanced APK Detection Function
         function isRunningInAPK() {
             // Multiple detection methods for different APK builders
-            return (
+            const detectionChecks = {
                 // Cordova/PhoneGap detection
-                typeof cordova !== 'undefined' ||
-                typeof window.cordova !== 'undefined' ||
+                cordova: typeof cordova !== 'undefined' || typeof window.cordova !== 'undefined',
                 // WebView detection
-                typeof window.AndroidInterface !== 'undefined' ||
-                typeof window.webkit !== 'undefined' ||
+                androidInterface: typeof window.AndroidInterface !== 'undefined',
+                webkit: typeof window.webkit !== 'undefined',
                 // User agent detection for WebView
-                navigator.userAgent.includes('wv') ||
-                navigator.userAgent.includes('Android') && navigator.userAgent.includes('Version/') ||
+                userAgentWv: navigator.userAgent.includes('wv'),
+                userAgentAndroidVersion: navigator.userAgent.includes('Android') && navigator.userAgent.includes('Version/'),
+                userAgentChrome: navigator.userAgent.includes('Chrome') && navigator.userAgent.includes('Mobile'),
                 // App protocol detection
-                window.location.protocol === 'file:' ||
+                fileProtocol: window.location.protocol === 'file:',
                 // Origin detection for APK
-                window.location.origin === 'null' ||
-                window.location.hostname === '' ||
+                nullOrigin: window.location.origin === 'null',
+                emptyHostname: window.location.hostname === '',
                 // Additional WebView indicators
-                window.navigator.standalone ||
-                window.matchMedia('(display-mode: standalone)').matches ||
+                standalone: window.navigator.standalone,
+                standaloneDisplay: window.matchMedia('(display-mode: standalone)').matches,
+                // Chrome APK specific detection
+                isChromeMobile: navigator.userAgent.includes('Chrome') && navigator.userAgent.includes('Mobile') && !navigator.userAgent.includes('Safari'),
+                // WebView package detection (common in APKs)
+                hasWebViewPackage: navigator.userAgent.includes('com.google.android.webview') || navigator.userAgent.includes('wv'),
                 // Check if download attribute doesn't work (APK limitation)
-                !document.createElement('a').download === undefined
+                downloadUnsupported: document.createElement('a').download === undefined
+            };
+            
+            console.log('APK Detection Details:', detectionChecks);
+            
+            return (
+                detectionChecks.cordova ||
+                detectionChecks.androidInterface ||
+                detectionChecks.webkit ||
+                detectionChecks.userAgentWv ||
+                detectionChecks.userAgentAndroidVersion ||
+                detectionChecks.fileProtocol ||
+                detectionChecks.nullOrigin ||
+                detectionChecks.emptyHostname ||
+                detectionChecks.standalone ||
+                detectionChecks.standaloneDisplay ||
+                detectionChecks.isChromeMobile ||
+                detectionChecks.hasWebViewPackage ||
+                detectionChecks.downloadUnsupported
             );
         }
 
