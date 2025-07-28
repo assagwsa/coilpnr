@@ -172,10 +172,21 @@
             if (isPixelRequest) {
               return createPixelResponse();
             }
-            return ContentService.createTextOutput(JSON.stringify({
+            // Prepare sheet not found response
+            const sheetNotFoundResult = {
               success: false,
               error: "Sheet '" + sheetName + "' not found"
-            })).setMimeType(ContentService.MimeType.JSON);
+            };
+            
+            // Check if this is a JSONP request (for Chrome APK compatibility)
+            const callback = e.parameter ? e.parameter.callback : null;
+            if (callback) {
+              return ContentService.createTextOutput(callback + '(' + JSON.stringify(sheetNotFoundResult) + ');')
+                .setMimeType(ContentService.MimeType.JAVASCRIPT);
+            }
+            
+            return ContentService.createTextOutput(JSON.stringify(sheetNotFoundResult))
+              .setMimeType(ContentService.MimeType.JSON);
           }
           
           // Add data to sheet
@@ -189,12 +200,23 @@
             return createPixelResponse();
           }
           
-          // For regular requests, return JSON response with CORS headers
-          const output = ContentService.createTextOutput(JSON.stringify({
+          // Prepare response data
+          const result = {
             success: true,
             recordsAdded: data.length,
             message: "Data successfully added to " + sheetName
-          })).setMimeType(ContentService.MimeType.JSON);
+          };
+          
+          // Check if this is a JSONP request (for Chrome APK compatibility)
+          const callback = e.parameter ? e.parameter.callback : null;
+          if (callback) {
+            return ContentService.createTextOutput(callback + '(' + JSON.stringify(result) + ');')
+              .setMimeType(ContentService.MimeType.JAVASCRIPT);
+          }
+          
+          // For regular requests, return JSON response with CORS headers
+          const output = ContentService.createTextOutput(JSON.stringify(result))
+            .setMimeType(ContentService.MimeType.JSON);
           
           return output;
         }
@@ -204,10 +226,21 @@
           return createPixelResponse();
         }
         
-        return ContentService.createTextOutput(JSON.stringify({
+        // Prepare no data response
+        const noDataResult = {
           success: false,
           error: "No data provided"
-        })).setMimeType(ContentService.MimeType.JSON);
+        };
+        
+        // Check if this is a JSONP request (for Chrome APK compatibility)
+        const callback = e.parameter ? e.parameter.callback : null;
+        if (callback) {
+          return ContentService.createTextOutput(callback + '(' + JSON.stringify(noDataResult) + ');')
+            .setMimeType(ContentService.MimeType.JAVASCRIPT);
+        }
+        
+        return ContentService.createTextOutput(JSON.stringify(noDataResult))
+          .setMimeType(ContentService.MimeType.JSON);
         
       } catch (error) {
         // For pixel requests, return pixel even on error
@@ -215,10 +248,21 @@
           return createPixelResponse();
         }
         
-        return ContentService.createTextOutput(JSON.stringify({
+        // Prepare error response
+        const errorResult = {
           success: false,
           error: error.toString()
-        })).setMimeType(ContentService.MimeType.JSON);
+        };
+        
+        // Check if this is a JSONP request (for Chrome APK compatibility)
+        const callback = e.parameter ? e.parameter.callback : null;
+        if (callback) {
+          return ContentService.createTextOutput(callback + '(' + JSON.stringify(errorResult) + ');')
+            .setMimeType(ContentService.MimeType.JAVASCRIPT);
+        }
+        
+        return ContentService.createTextOutput(JSON.stringify(errorResult))
+          .setMimeType(ContentService.MimeType.JSON);
       }
     }
 
@@ -1801,44 +1845,106 @@
                             let fallbackUsed = false;
                             
                             try {
-                                // Use image pixel tracking method - most reliable for Google Apps Script
-                                const params = new URLSearchParams();
-                                params.append('sheetName', sheetName);
-                                params.append('data', JSON.stringify(data));
-                                params.append('pixel', '1'); // Indicate this is a pixel request
+                                // Check if running in Chrome APK/WebView environment
+                                const isAPK = isRunningInAPK();
+                                console.log('APK detection result:', isAPK);
                                 
-                                const pixelUrl = `${webAppUrl}?${params.toString()}`;
-                                console.log('Sending data via image pixel method:', pixelUrl);
-                                
-                                // Create promise for image load
-                                const pixelPromise = new Promise((resolve, reject) => {
-                                    const img = new Image();
-                                    const timeout = setTimeout(() => {
-                                        console.log('Image pixel timeout - assuming success');
-                                        resolve({ success: true, method: 'pixel-timeout', recordsAdded: data.length });
-                                    }, 10000);
+                                if (isAPK) {
+                                    // For Chrome APK/WebView: Use JSONP callback method which is more reliable
+                                    console.log('Chrome APK/WebView detected - using JSONP callback method');
                                     
-                                    img.onload = () => {
-                                        clearTimeout(timeout);
-                                        console.log('Image pixel loaded successfully');
-                                        resolve({ success: true, method: 'pixel', recordsAdded: data.length });
-                                    };
+                                    const params = new URLSearchParams();
+                                    params.append('sheetName', sheetName);
+                                    params.append('data', JSON.stringify(data));
+                                    params.append('callback', 'handleGoogleSheetsCallback');
                                     
-                                    img.onerror = () => {
-                                        clearTimeout(timeout);
-                                        console.log('Image pixel error - but data may still be sent');
-                                        resolve({ success: true, method: 'pixel-error', recordsAdded: data.length });
-                                    };
+                                    const jsonpUrl = `${webAppUrl}?${params.toString()}`;
+                                    console.log('Sending data via JSONP method for APK:', jsonpUrl);
                                     
-                                    // Set image source to trigger the request
-                                    img.src = pixelUrl;
-                                });
-                                
-                                const result = await pixelPromise;
-                                console.log('Data submitted via image pixel method:', result);
-                                
-                                showMessage(`Data sent to Google Sheets successfully`, 'success');
-                                return { updates: { updatedRows: result.recordsAdded || data.length } };
+                                    // Create JSONP callback
+                                    const jsonpPromise = new Promise((resolve, reject) => {
+                                        // Create global callback function
+                                        window.handleGoogleSheetsCallback = (response) => {
+                                            console.log('JSONP callback received:', response);
+                                            resolve({ success: true, method: 'jsonp-apk', recordsAdded: data.length, response });
+                                            // Clean up
+                                            delete window.handleGoogleSheetsCallback;
+                                            if (scriptElement) {
+                                                document.head.removeChild(scriptElement);
+                                            }
+                                        };
+                                        
+                                        // Create script element for JSONP
+                                        const scriptElement = document.createElement('script');
+                                        scriptElement.src = jsonpUrl;
+                                        scriptElement.onerror = () => {
+                                            console.log('JSONP script error - but data may still be sent');
+                                            resolve({ success: true, method: 'jsonp-apk-error', recordsAdded: data.length });
+                                            delete window.handleGoogleSheetsCallback;
+                                            document.head.removeChild(scriptElement);
+                                        };
+                                        
+                                        // Add timeout for JSONP
+                                        setTimeout(() => {
+                                            if (window.handleGoogleSheetsCallback) {
+                                                console.log('JSONP timeout - assuming success');
+                                                resolve({ success: true, method: 'jsonp-apk-timeout', recordsAdded: data.length });
+                                                delete window.handleGoogleSheetsCallback;
+                                                if (scriptElement && scriptElement.parentNode) {
+                                                    document.head.removeChild(scriptElement);
+                                                }
+                                            }
+                                        }, 10000);
+                                        
+                                        document.head.appendChild(scriptElement);
+                                    });
+                                    
+                                    const result = await jsonpPromise;
+                                    console.log('Data submitted via JSONP method for APK:', result);
+                                    
+                                    showMessage(`Data sent to Google Sheets successfully (APK mode)`, 'success');
+                                    return { updates: { updatedRows: result.recordsAdded || data.length } };
+                                    
+                                } else {
+                                    // For regular browsers: Use image pixel tracking method - most reliable for Google Apps Script
+                                    const params = new URLSearchParams();
+                                    params.append('sheetName', sheetName);
+                                    params.append('data', JSON.stringify(data));
+                                    params.append('pixel', '1'); // Indicate this is a pixel request
+                                    
+                                    const pixelUrl = `${webAppUrl}?${params.toString()}`;
+                                    console.log('Sending data via image pixel method (browser):', pixelUrl);
+                                    
+                                    // Create promise for image load
+                                    const pixelPromise = new Promise((resolve, reject) => {
+                                        const img = new Image();
+                                        const timeout = setTimeout(() => {
+                                            console.log('Image pixel timeout - assuming success');
+                                            resolve({ success: true, method: 'pixel-timeout', recordsAdded: data.length });
+                                        }, 10000);
+                                        
+                                        img.onload = () => {
+                                            clearTimeout(timeout);
+                                            console.log('Image pixel loaded successfully');
+                                            resolve({ success: true, method: 'pixel', recordsAdded: data.length });
+                                        };
+                                        
+                                        img.onerror = () => {
+                                            clearTimeout(timeout);
+                                            console.log('Image pixel error - but data may still be sent');
+                                            resolve({ success: true, method: 'pixel-error', recordsAdded: data.length });
+                                        };
+                                        
+                                        // Set image source to trigger the request
+                                        img.src = pixelUrl;
+                                    });
+                                    
+                                    const result = await pixelPromise;
+                                    console.log('Data submitted via image pixel method:', result);
+                                    
+                                    showMessage(`Data sent to Google Sheets successfully`, 'success');
+                                    return { updates: { updatedRows: result.recordsAdded || data.length } };
+                                }
                                 
                             } catch (pixelError) {
                                 console.log('Pixel method failed, trying window.open method:', pixelError.message);
