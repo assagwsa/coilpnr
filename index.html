@@ -1848,8 +1848,15 @@
                                 // Check if running in Chrome APK/WebView environment
                                 const isAPK = isRunningInAPK();
                                 console.log('APK detection result:', isAPK);
+                                console.log('User agent:', navigator.userAgent);
+                                console.log('Location protocol:', window.location.protocol);
+                                console.log('Location origin:', window.location.origin);
                                 
-                                if (isAPK) {
+                                // Force JSONP method for testing (you can remove this later)
+                                const forceJSONP = localStorage.getItem('forceJSONP') === 'true';
+                                console.log('Force JSONP mode:', forceJSONP);
+                                
+                                if (isAPK || forceJSONP) {
                                     // For Chrome APK/WebView: Use JSONP callback method which is more reliable
                                     console.log('Chrome APK/WebView detected - using JSONP callback method');
                                     
@@ -1863,25 +1870,29 @@
                                     
                                     // Create JSONP callback
                                     const jsonpPromise = new Promise((resolve, reject) => {
+                                        let scriptElement;
+                                        
                                         // Create global callback function
                                         window.handleGoogleSheetsCallback = (response) => {
                                             console.log('JSONP callback received:', response);
                                             resolve({ success: true, method: 'jsonp-apk', recordsAdded: data.length, response });
                                             // Clean up
                                             delete window.handleGoogleSheetsCallback;
-                                            if (scriptElement) {
+                                            if (scriptElement && scriptElement.parentNode) {
                                                 document.head.removeChild(scriptElement);
                                             }
                                         };
                                         
                                         // Create script element for JSONP
-                                        const scriptElement = document.createElement('script');
+                                        scriptElement = document.createElement('script');
                                         scriptElement.src = jsonpUrl;
                                         scriptElement.onerror = () => {
                                             console.log('JSONP script error - but data may still be sent');
                                             resolve({ success: true, method: 'jsonp-apk-error', recordsAdded: data.length });
                                             delete window.handleGoogleSheetsCallback;
-                                            document.head.removeChild(scriptElement);
+                                            if (scriptElement && scriptElement.parentNode) {
+                                                document.head.removeChild(scriptElement);
+                                            }
                                         };
                                         
                                         // Add timeout for JSONP
