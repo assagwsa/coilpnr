@@ -5915,73 +5915,106 @@ Data is currently saved locally and will sync once Web App is configured.`);
                     // Clean console output - don't log the blob URL
                     console.log('Opening PDF with filename:', filename);
                     
-                    // Create a link element to force proper filename when saving
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.target = '_blank';
-                    link.style.display = 'none';
-                    document.body.appendChild(link);
+                    // Mobile detection
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                     
-                    // Open PDF with proper filename handling
-                    const newWindow = window.open('', '_blank');
-                    if (newWindow) {
-                        // Create a proper HTML wrapper with download functionality
-                        newWindow.document.write(`
-                            <!DOCTYPE html>
-                            <html>
-                                <head>
-                                    <title>${filename.replace(/[<>"/]/g, '')}</title>
-                                    <style>
-                                        body { margin: 0; font-family: Arial, sans-serif; }
-                                        .header { 
-                                            background: #f8f9fa; 
-                                            padding: 10px 20px; 
-                                            border-bottom: 1px solid #dee2e6;
-                                            display: flex;
-                                            justify-content: space-between;
-                                            align-items: center;
-                                        }
-                                        .filename { font-weight: bold; color: #495057; }
-                                        .download-btn {
-                                            padding: 6px 12px;
-                                            background: #007bff;
-                                            color: white;
-                                            border: none;
-                                            border-radius: 4px;
-                                            cursor: pointer;
-                                            text-decoration: none;
-                                            font-size: 14px;
-                                        }
-                                        .download-btn:hover { background: #0056b3; }
-                                        iframe { width: 100%; height: calc(100vh - 50px); border: none; }
-                                    </style>
-                                </head>
-                                <body>
-                                    <div class="header">
-                                        <div class="filename">${filename.replace(/[<>"/]/g, '')}</div>
-                                        <a href="${url}" download="${filename.replace(/[<>"]/g, '')}" class="download-btn">Save PDF</a>
-                                    </div>
-                                    <iframe src="${url}" type="application/pdf"></iframe>
-                                </body>
-                            </html>
-                        `);
-                        newWindow.document.close();
+                    if (isMobile) {
+                        // Mobile-specific handling: Use direct download approach
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = filename;
+                        link.style.display = 'none';
+                        document.body.appendChild(link);
                         
-                        console.log('PDF opened successfully with proper filename');
-                        showMessage('PDF opened with proper filename', 'success');
-                    } else {
-                        // Fallback: direct open if popup blocked
-                        link.click();
-                        console.log('PDF opened via direct link (popup was blocked)');
-                        showMessage('PDF opened in browser', 'success');
-                    }
-                    
-                    // Clean up the temporary link
-                    setTimeout(() => {
-                        if (document.body.contains(link)) {
-                            document.body.removeChild(link);
+                        // Try to open in new tab first, fallback to download
+                        try {
+                            // Attempt to open in browser
+                            const newTab = window.open(url, '_blank');
+                            if (newTab) {
+                                console.log('PDF opened in new tab on mobile');
+                                showMessage('PDF opened in new tab', 'success');
+                            } else {
+                                // Fallback to download
+                                link.click();
+                                console.log('PDF downloaded on mobile (popup blocked)');
+                                showMessage('PDF downloaded to device', 'success');
+                            }
+                        } catch (mobileError) {
+                            // Ultimate fallback: force download
+                            link.click();
+                            console.log('PDF downloaded on mobile (browser limitation)');
+                            showMessage('PDF downloaded to your device', 'success');
                         }
-                    }, 1000);
+                        
+                        // Clean up
+                        setTimeout(() => {
+                            if (document.body.contains(link)) {
+                                document.body.removeChild(link);
+                            }
+                        }, 1000);
+                        
+                    } else {
+                        // Desktop handling: Full featured PDF viewer
+                        const newWindow = window.open('', '_blank');
+                        if (newWindow) {
+                            // Create a proper HTML wrapper with download functionality
+                            newWindow.document.write(`
+                                <!DOCTYPE html>
+                                <html>
+                                    <head>
+                                        <title>${filename.replace(/[<>"/]/g, '')}</title>
+                                        <meta name="viewport" content="width=device-width, initial-scale=1">
+                                        <style>
+                                            body { margin: 0; font-family: Arial, sans-serif; }
+                                            .header { 
+                                                background: #f8f9fa; 
+                                                padding: 10px 20px; 
+                                                border-bottom: 1px solid #dee2e6;
+                                                display: flex;
+                                                justify-content: space-between;
+                                                align-items: center;
+                                            }
+                                            .filename { font-weight: bold; color: #495057; }
+                                            .download-btn {
+                                                padding: 6px 12px;
+                                                background: #007bff;
+                                                color: white;
+                                                border: none;
+                                                border-radius: 4px;
+                                                cursor: pointer;
+                                                text-decoration: none;
+                                                font-size: 14px;
+                                            }
+                                            .download-btn:hover { background: #0056b3; }
+                                            iframe { width: 100%; height: calc(100vh - 50px); border: none; }
+                                        </style>
+                                    </head>
+                                    <body>
+                                        <div class="header">
+                                            <div class="filename">${filename.replace(/[<>"/]/g, '')}</div>
+                                            <a href="${url}" download="${filename.replace(/[<>"]/g, '')}" class="download-btn">Save PDF</a>
+                                        </div>
+                                        <iframe src="${url}" type="application/pdf"></iframe>
+                                    </body>
+                                </html>
+                            `);
+                            newWindow.document.close();
+                            
+                            console.log('PDF opened successfully with proper filename on desktop');
+                            showMessage('PDF opened with proper filename', 'success');
+                        } else {
+                            // Fallback: direct download if popup blocked
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = filename;
+                            link.style.display = 'none';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            console.log('PDF downloaded (popup was blocked)');
+                            showMessage('PDF downloaded to computer', 'success');
+                        }
+                    }
                     
                     // Clean up URL after delay to free memory
                     setTimeout(() => {
