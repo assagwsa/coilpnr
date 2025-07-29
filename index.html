@@ -5344,7 +5344,7 @@ Data is currently saved locally and will sync once Web App is configured.`);
             }
         }
 
-        // Enhanced PDF download function for mobile/APK compatibility
+        // Enhanced PDF viewer function for mobile/APK compatibility
         function downloadReportAsPDF() {
             try {
                 const title = document.getElementById('reportModalTitle').textContent;
@@ -5903,47 +5903,45 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
                 const filename = `${cleanTitle}_${timestamp}.pdf`;
                 
-                // Force PDF save - ensure proper PDF format
-                console.log('Saving PDF with filename:', filename);
+                // Open PDF directly in browser instead of downloading
+                console.log('Opening PDF with filename:', filename);
                 
                 try {
-                    // Try primary save method
-                    doc.save(filename);
-                    console.log('PDF saved successfully using doc.save()');
-                    showMessage('PDF downloaded successfully! Check your Downloads folder', 'success');
-                } catch (saveError) {
-                    console.warn('Primary save failed, trying blob method:', saveError);
-                    
-                    // Fallback to blob method
+                    // Create blob and open in new window/tab
                     const pdfBlob = doc.output('blob');
                     const url = URL.createObjectURL(pdfBlob);
                     
-                    const downloadLink = document.createElement('a');
-                    downloadLink.href = url;
-                    downloadLink.download = filename;
-                    downloadLink.style.display = 'none';
-                    document.body.appendChild(downloadLink);
+                    // Open PDF in new window/tab
+                    const newWindow = window.open(url, '_blank');
                     
-                    // Force click and download
-                    downloadLink.click();
-                    
-                    // Clean up after delay
-                    setTimeout(() => {
-                        if (document.body.contains(downloadLink)) {
-                            document.body.removeChild(downloadLink);
-                        }
-                        URL.revokeObjectURL(url);
-                    }, 1000);
-                    
-                    console.log('PDF saved successfully using blob method');
-                    showMessage('PDF downloaded successfully via blob method! Check your Downloads folder', 'success');
+                    if (newWindow) {
+                        console.log('PDF opened successfully in new window');
+                        showMessage('PDF opened in new tab/window', 'success');
+                        
+                        // Clean up URL after delay to free memory
+                        setTimeout(() => {
+                            URL.revokeObjectURL(url);
+                        }, 5000);
+                    } else {
+                        // Fallback: try to navigate to PDF in same window if popup blocked
+                        window.open(url, '_self');
+                        console.log('PDF opened in same window (popup was blocked)');
+                        showMessage('PDF opened in browser', 'success');
+                        
+                        setTimeout(() => {
+                            URL.revokeObjectURL(url);
+                        }, 5000);
+                    }
+                } catch (openError) {
+                    console.warn('Failed to open PDF in browser:', openError);
+                    showMessage('Error opening PDF: ' + openError.message, 'error');
                 }
                 
             } catch (error) {
                 console.error('Error generating PDF:', error);
                 
                 // Provide more specific error messages for mobile users
-                let errorMessage = 'Error generating PDF: ';
+                let errorMessage = 'Error opening PDF: ';
                 if (error.message.includes('not loaded')) {
                     errorMessage += 'PDF library not available. Please refresh the page and try again.';
                 } else if (error.message.includes('quota')) {
