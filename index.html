@@ -5898,42 +5898,98 @@ Data is currently saved locally and will sync once Web App is configured.`);
                     });
                 }
                 
-                // Generate mobile-friendly filename
+                // Generate meaningful filename from report title
                 const cleanTitle = title.replace(/[^a-z0-9\s]/gi, '').replace(/\s+/g, '_').toLowerCase();
-                const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-                const filename = `${cleanTitle}_${timestamp}.pdf`;
+                const timestamp = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+                const time = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '');
+                const filename = `CoilReport_${cleanTitle}_${timestamp}_${time}.pdf`;
                 
                 // Open PDF directly in browser instead of downloading
                 console.log('Opening PDF with filename:', filename);
                 
                 try {
-                    // Create blob and open in new window/tab
+                    // Create blob and open in new window/tab with proper filename
                     const pdfBlob = doc.output('blob');
                     const url = URL.createObjectURL(pdfBlob);
                     
-                    // Open PDF in new window/tab
-                    const newWindow = window.open(url, '_blank');
+                    // Clean console output - don't log the blob URL
+                    console.log('Opening PDF with filename:', filename);
                     
+                    // Create a link element to force proper filename when saving
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.target = '_blank';
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    
+                    // Open PDF with proper filename handling
+                    const newWindow = window.open('', '_blank');
                     if (newWindow) {
-                        console.log('PDF opened successfully in new window');
-                        showMessage('PDF opened in new tab/window', 'success');
+                        // Create a proper HTML wrapper with download functionality
+                        newWindow.document.write(`
+                            <!DOCTYPE html>
+                            <html>
+                                <head>
+                                    <title>${filename.replace(/[<>"/]/g, '')}</title>
+                                    <style>
+                                        body { margin: 0; font-family: Arial, sans-serif; }
+                                        .header { 
+                                            background: #f8f9fa; 
+                                            padding: 10px 20px; 
+                                            border-bottom: 1px solid #dee2e6;
+                                            display: flex;
+                                            justify-content: space-between;
+                                            align-items: center;
+                                        }
+                                        .filename { font-weight: bold; color: #495057; }
+                                        .download-btn {
+                                            padding: 6px 12px;
+                                            background: #007bff;
+                                            color: white;
+                                            border: none;
+                                            border-radius: 4px;
+                                            cursor: pointer;
+                                            text-decoration: none;
+                                            font-size: 14px;
+                                        }
+                                        .download-btn:hover { background: #0056b3; }
+                                        iframe { width: 100%; height: calc(100vh - 50px); border: none; }
+                                    </style>
+                                </head>
+                                <body>
+                                    <div class="header">
+                                        <div class="filename">${filename.replace(/[<>"/]/g, '')}</div>
+                                        <a href="${url}" download="${filename.replace(/[<>"]/g, '')}" class="download-btn">Save PDF</a>
+                                    </div>
+                                    <iframe src="${url}" type="application/pdf"></iframe>
+                                </body>
+                            </html>
+                        `);
+                        newWindow.document.close();
                         
-                        // Clean up URL after delay to free memory
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                        }, 5000);
+                        console.log('PDF opened successfully with proper filename');
+                        showMessage('PDF opened with proper filename', 'success');
                     } else {
-                        // Fallback: try to navigate to PDF in same window if popup blocked
-                        window.open(url, '_self');
-                        console.log('PDF opened in same window (popup was blocked)');
+                        // Fallback: direct open if popup blocked
+                        link.click();
+                        console.log('PDF opened via direct link (popup was blocked)');
                         showMessage('PDF opened in browser', 'success');
-                        
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                        }, 5000);
                     }
+                    
+                    // Clean up the temporary link
+                    setTimeout(() => {
+                        if (document.body.contains(link)) {
+                            document.body.removeChild(link);
+                        }
+                    }, 1000);
+                    
+                    // Clean up URL after delay to free memory
+                    setTimeout(() => {
+                        URL.revokeObjectURL(url);
+                    }, 10000);
+                    
                 } catch (openError) {
-                    console.warn('Failed to open PDF in browser:', openError);
+                    console.error('Failed to open PDF:', openError.message);
                     showMessage('Error opening PDF: ' + openError.message, 'error');
                 }
                 
