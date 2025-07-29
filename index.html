@@ -1422,28 +1422,31 @@
                 this.apiKey = apiKey;
                 this.webAppUrl = webAppUrl;
                 
-                // Store credentials
+                // Store credentials in session memory only (no localStorage for multi-user app)
+                window.googleSheetsConfig = window.googleSheetsConfig || {};
                 if (this.spreadsheetId) {
-                    localStorage.setItem('googleSheets_spreadsheetId', this.spreadsheetId);
-                    localStorage.setItem('googleSheets_spreadsheetUrl', spreadsheetIdOrUrl);
+                    window.googleSheetsConfig.spreadsheetId = this.spreadsheetId;
+                    window.googleSheetsConfig.spreadsheetUrl = spreadsheetIdOrUrl;
                 }
                 if (this.apiKey) {
-                    localStorage.setItem('googleSheets_apiKey', this.apiKey);
+                    window.googleSheetsConfig.apiKey = this.apiKey;
                 }
                 if (this.webAppUrl) {
-                    localStorage.setItem('googleSheets_webAppUrl', this.webAppUrl);
+                    window.googleSheetsConfig.webAppUrl = this.webAppUrl;
                 }
             }
 
             getCredentials() {
+                // Get from session memory only (no localStorage for multi-user app)
+                const config = window.googleSheetsConfig || {};
                 if (!this.spreadsheetId) {
-                    this.spreadsheetId = localStorage.getItem('googleSheets_spreadsheetId') || '';
+                    this.spreadsheetId = config.spreadsheetId || '';
                 }
                 if (!this.apiKey) {
-                    this.apiKey = localStorage.getItem('googleSheets_apiKey') || '';
+                    this.apiKey = config.apiKey || '';
                 }
                 if (!this.webAppUrl) {
-                    this.webAppUrl = localStorage.getItem('googleSheets_webAppUrl') || '';
+                    this.webAppUrl = config.webAppUrl || '';
                 }
                 return { spreadsheetId: this.spreadsheetId, apiKey: this.apiKey, webAppUrl: this.webAppUrl };
             }
@@ -2012,7 +2015,8 @@
                         timestamp: new Date().toISOString()
                     };
                     
-                    localStorage.setItem('pendingSheetData', JSON.stringify(localData));
+                    // Store in session memory only (no localStorage for multi-user app)
+                    window.pendingSheetData = localData;
                     
                     // Check if we have the Web App URL configured
                     if (webAppUrl && webAppUrl.includes('script.google.com/macros/s/')) {
@@ -2793,8 +2797,9 @@ Data is currently saved locally and will sync once Web App is configured.`);
         let vesselName = 'coil-data'; // Default vessel name
         let addedCoils = [];
         let vehicleCoilMap = {};
-        let vehicleSerialGroupMap = JSON.parse(localStorage.getItem('vehicleSerialGroupMap')) || {}; // Maps vehicle -> group number
-        let currentGroupNumber = parseInt(localStorage.getItem('currentGroupNumber')) || 8; // Current group number for serial assignment - starts from 8 as requested
+        // Use session memory only (no localStorage for multi-user app)
+        let vehicleSerialGroupMap = window.vehicleSerialGroupMap || {}; // Maps vehicle -> group number
+        let currentGroupNumber = window.currentGroupNumber || 8; // Current group number for serial assignment - starts from 8 as requested
         let html5QrCode;
         let serialCounter = 1;
         let generatedTextData = []; // Store generated text reports for Google Sheets upload
@@ -2863,11 +2868,13 @@ Data is currently saved locally and will sync once Web App is configured.`);
                     if (webAppUrlInput) {
                         webAppUrlInput.value = webAppUrlFromEnv;
                     }
-                    // Store it for future use
-                    localStorage.setItem('googleSheets_webAppUrl', webAppUrlFromEnv);
+                    // Store it in session memory only (no localStorage for multi-user app)
+                    window.googleSheetsConfig = window.googleSheetsConfig || {};
+                    window.googleSheetsConfig.webAppUrl = webAppUrlFromEnv;
                 } else {
-                    // Load stored Web App URL
-                    finalWebAppUrl = localStorage.getItem('googleSheets_webAppUrl') || '';
+                    // Load from session memory only
+                    const config = window.googleSheetsConfig || {};
+                    finalWebAppUrl = config.webAppUrl || '';
                     const webAppUrlInput = document.getElementById('webAppUrl');
                     if (webAppUrlInput && finalWebAppUrl) {
                         webAppUrlInput.value = finalWebAppUrl;
@@ -3049,7 +3056,8 @@ Data is currently saved locally and will sync once Web App is configured.`);
                         currentGroupNumber = maxGroupNumber;
                         
                         // Store the updated group number
-                        localStorage.setItem('currentGroupNumber', currentGroupNumber);
+                        // Store in session memory only (no localStorage for multi-user app)
+                        window.currentGroupNumber = currentGroupNumber;
                         console.log(`Serial numbering will continue from group ${currentGroupNumber}, last sub-number was ${latestGroupCount}`);
                         
                         // Update vehicle-to-group mapping based on existing data
@@ -3065,7 +3073,8 @@ Data is currently saved locally and will sync once Web App is configured.`);
                             }
                         });
                         
-                        localStorage.setItem('vehicleSerialGroupMap', JSON.stringify(vehicleSerialGroupMap));
+                        // Store in session memory only (no localStorage for multi-user app)
+                        window.vehicleSerialGroupMap = vehicleSerialGroupMap;
                         console.log('Updated vehicle-group mapping from existing OUT data');
                         
                         // Note: Shipment summary will be updated after full initialization
@@ -3077,17 +3086,17 @@ Data is currently saved locally and will sync once Web App is configured.`);
                             console.log('Vessel name updated from OUT data to:', vesselName);
                         }
                     } else {
-                        currentGroupNumber = parseInt(localStorage.getItem('currentGroupNumber')) || 8;
+                        currentGroupNumber = window.currentGroupNumber || 8;
                         console.log('No valid serial numbers found in OUT data, using stored/default group number:', currentGroupNumber);
                     }
                 } else {
-                    currentGroupNumber = parseInt(localStorage.getItem('currentGroupNumber')) || 8;
+                    currentGroupNumber = window.currentGroupNumber || 8;
                     console.log('No existing OUT data found, using stored/default group number:', currentGroupNumber);
                 }
                 
             } catch (error) {
                 console.log('Could not load OUT data for serial counter, using stored/default:', error.message);
-                currentGroupNumber = parseInt(localStorage.getItem('currentGroupNumber')) || 8;
+                currentGroupNumber = window.currentGroupNumber || 8;
             }
         }
 
@@ -3873,8 +3882,9 @@ Data is currently saved locally and will sync once Web App is configured.`);
                         console.log('Updated local outData array. Total entries:', outData.length);
                         
                         // Store outData locally so reports can access it
-                        localStorage.setItem('outData', JSON.stringify(outData));
-                        console.log('Saved outData to localStorage for report generation');
+                        // Store in session memory only (no localStorage for multi-user app)
+                        window.outData = outData;
+                        console.log('Saved outData to session memory for report generation');
                         
                         // Always generate fresh text reports from the new OUT data during save
                         console.log('Generating fresh text reports from current save operation with', outEntries.length, 'OUT entries');
@@ -4146,7 +4156,7 @@ Data is currently saved locally and will sync once Web App is configured.`);
                     }
                     
                     // Load local storage data
-                    const localData = JSON.parse(localStorage.getItem('outData') || '[]');
+                    const localData = window.outData || [];
                     console.log('Local storage data loaded for text reports:', localData.length, 'records');
                     
                     // Load current session data
@@ -4172,7 +4182,7 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 } catch (error) {
                     console.error('Error loading comprehensive text report data:', error);
                     // Final fallback to any available data
-                    allOutData = outData || JSON.parse(localStorage.getItem('outData') || '[]');
+                    allOutData = outData || window.outData || [];
                     console.log('Using final fallback data for text reports, length:', allOutData.length);
                 }
                 
@@ -6271,22 +6281,33 @@ Data is currently saved locally and will sync once Web App is configured.`);
         }
 
         function clearLocalStorage() {
-            if (confirm('Are you sure you want to clear all local storage data?')) {
-                localStorage.clear();
-                showMessage('Local storage cleared', 'success');
+            if (confirm('Are you sure you want to clear all session data?')) {
+                // Clear session memory only (no localStorage for multi-user app)
+                window.outData = [];
+                window.googleSheetsConfig = {};
+                window.vehicleSerialGroupMap = {};
+                window.currentGroupNumber = 8;
+                window.pendingSheetData = null;
+                showMessage('Session data cleared', 'success');
             }
         }
 
         function resetApp() {
-            if (confirm('Are you sure you want to reset the app? This will clear all data and reload the page.')) {
-                localStorage.clear();
+            if (confirm('Are you sure you want to reset the app? This will clear all session data and reload the page.')) {
+                // Clear session memory only (no localStorage for multi-user app)
+                window.outData = [];
+                window.googleSheetsConfig = {};
+                window.vehicleSerialGroupMap = {};
+                window.currentGroupNumber = 8;
+                window.pendingSheetData = null;
                 location.reload();
             }
         }
 
         function setGoogleSheetsCredentials() {
             // Check if credentials are already set
-            const existingSpreadsheetId = localStorage.getItem('googleSheets_spreadsheetId');
+            const config = window.googleSheetsConfig || {};
+            const existingSpreadsheetId = config.spreadsheetId;
             if (existingSpreadsheetId) {
                 const confirm = window.confirm('Google Sheets credentials are already set. Do you want to update them?');
                 if (!confirm) {
@@ -6298,7 +6319,7 @@ Data is currently saved locally and will sync once Web App is configured.`);
             const spreadsheetUrl = prompt('Enter your Google Sheets URL or Spreadsheet ID:');
             if (spreadsheetUrl) {
                 const apiKey = prompt('Enter your Google Sheets API Key (optional - leave empty for public sheets):');
-                const storedWebAppUrl = localStorage.getItem('googleSheets_webAppUrl') || '';
+                const storedWebAppUrl = config.webAppUrl || '';
                 window.googleSheetsAPI.setCredentials(spreadsheetUrl, apiKey || '', storedWebAppUrl);
                 showMessage('Google Sheets credentials set successfully', 'success');
                 updateGoogleSheetsButtonStatus();
@@ -6312,7 +6333,8 @@ Data is currently saved locally and will sync once Web App is configured.`);
 
         function updateGoogleSheetsButtonStatus() {
             const button = document.getElementById('googleSheetsBtn');
-            const existingSpreadsheetId = localStorage.getItem('googleSheets_spreadsheetId');
+            const config = window.googleSheetsConfig || {};
+            const existingSpreadsheetId = config.spreadsheetId;
             
             if (existingSpreadsheetId && button) {
                 button.textContent = 'Google Sheets Set ✓';
@@ -6330,7 +6352,7 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 showMessage('Uploading local data to Google Sheets...', 'info');
                 
                 // Get local OUT data
-                const localOutData = JSON.parse(localStorage.getItem('outData') || '[]');
+                const localOutData = window.outData || [];
                 if (localOutData.length === 0) {
                     showMessage('No local OUT data found to upload', 'warning');
                     return;
@@ -6365,7 +6387,7 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 // Upload data to Google Sheets
                 const result = await window.googleSheetsAPI.appendToSheet(outSheetName, localOutData, false);
                 
-                const metaData = JSON.parse(localStorage.getItem('outDataMeta') || '{}');
+                const metaData = window.outDataMeta || {};
                 const vesselName = metaData.vesselName || 'coil-data';
                 
                 showMessage(`Successfully uploaded ${localOutData.length} records to Google Sheets (${outSheetName}) for vessel "${vesselName}"`, 'success');
@@ -6390,6 +6412,7 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 
                 if (sheetsData && sheetsData.length > 0) {
                     // Update global outData variable only (no localStorage for multi-user app)
+                    window.outData = finalOutData;
                     window.outData = sheetsData;
                     
                     showMessage(`Successfully synced ${sheetsData.length} records from Google Sheets`, 'success');
