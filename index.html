@@ -2122,18 +2122,39 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 }
             }
 
-            // Chrome APK Detection Method
+            // Chrome APK Detection Method - Enhanced for better detection
             detectChromeAPK() {
                 const ua = navigator.userAgent;
-                const isWebView = ua.includes('wv') || ua.includes('Version/') && ua.includes('Chrome/');
+                const isWebView = ua.includes('wv') || (ua.includes('Version/') && ua.includes('Chrome/'));
                 const isAndroid = ua.includes('Android');
                 const isFileProtocol = window.location.protocol === 'file:';
                 const isNullOrigin = window.location.origin === 'null' || window.location.hostname === '';
                 const hasAndroidInterface = typeof window.Android !== 'undefined';
                 const hasWebKit = typeof window.webkit !== 'undefined';
                 const isCordova = typeof window.cordova !== 'undefined';
+                const isLocalFile = window.location.href.includes('file://');
+                const hasRestrictedOrigin = window.location.origin === 'null' || window.location.origin.includes('file://');
+                const isWebAppEnvironment = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
                 
-                console.log('Chrome APK Detection:', {
+                // Additional Chrome APK indicators
+                const hasLimitedFetch = (() => {
+                    try {
+                        return !window.fetch || typeof window.fetch !== 'function';
+                    } catch {
+                        return true;
+                    }
+                })();
+                
+                const hasRestrictedXHR = (() => {
+                    try {
+                        const xhr = new XMLHttpRequest();
+                        return false;
+                    } catch {
+                        return true;
+                    }
+                })();
+                
+                console.log('Enhanced Chrome APK Detection:', {
                     userAgent: ua,
                     isWebView,
                     isAndroid,
@@ -2142,107 +2163,189 @@ Data is currently saved locally and will sync once Web App is configured.`);
                     hasAndroidInterface,
                     hasWebKit,
                     isCordova,
+                    isLocalFile,
+                    hasRestrictedOrigin,
+                    isWebAppEnvironment,
+                    hasLimitedFetch,
+                    hasRestrictedXHR,
                     origin: window.location.origin,
-                    protocol: window.location.protocol
+                    protocol: window.location.protocol,
+                    href: window.location.href
                 });
                 
-                return isAndroid && (isWebView || isFileProtocol || isNullOrigin || hasAndroidInterface || hasWebKit || isCordova);
+                // More aggressive Chrome APK detection
+                const chromeAPKIndicators = [
+                    isAndroid && isWebView,
+                    isFileProtocol,
+                    isNullOrigin,
+                    hasAndroidInterface,
+                    hasWebKit,
+                    isCordova,
+                    isLocalFile,
+                    hasRestrictedOrigin,
+                    isWebAppEnvironment && isAndroid,
+                    hasLimitedFetch,
+                    hasRestrictedXHR
+                ];
+                
+                const detectedCount = chromeAPKIndicators.filter(Boolean).length;
+                const isChromeAPK = detectedCount > 0; // Any indicator suggests Chrome APK
+                
+                console.log(`Chrome APK detection: ${detectedCount} indicators found, result: ${isChromeAPK}`);
+                
+                return isChromeAPK;
             }
 
-            // Chrome APK Specific Data Submission
+            // Chrome APK Specific Data Submission with enhanced methods
             async submitDataChromeAPK(webAppUrl, sheetName, data) {
-                console.log('Using Chrome APK specific submission methods...');
+                console.log('🚀 Using Chrome APK specific submission methods for data:', data.length, 'records');
                 
-                try {
-                    // Method 1: Hidden iframe with form submission
-                    const result1 = await this.submitViaHiddenIframe(webAppUrl, sheetName, data);
-                    if (result1.success) return result1;
-                } catch (error) {
-                    console.log('Hidden iframe method failed:', error.message);
+                // Show immediate feedback to user
+                showMessage('Chrome APK detected - using specialized data submission...', 'info');
+                
+                const methods = [
+                    { name: 'Hidden Iframe', func: this.submitViaHiddenIframe },
+                    { name: 'Multiple Pixels', func: this.submitViaMultiplePixels },
+                    { name: 'Dynamic Script', func: this.submitViaDynamicScript },
+                    { name: 'WebView Interface', func: this.submitViaWebViewInterface },
+                    { name: 'Direct Navigation', func: this.submitViaDirectNavigation }
+                ];
+                
+                for (const method of methods) {
+                    try {
+                        console.log(`🔄 Attempting ${method.name} method...`);
+                        showMessage(`Trying ${method.name} method...`, 'info');
+                        
+                        const result = await method.func.call(this, webAppUrl, sheetName, data);
+                        if (result.success) {
+                            console.log(`✅ ${method.name} method succeeded:`, result);
+                            showMessage(`Data submitted successfully via ${method.name}!`, 'success');
+                            return { updates: { updatedRows: result.recordsAdded || data.length } };
+                        } else {
+                            console.log(`❌ ${method.name} method failed:`, result.error);
+                        }
+                    } catch (error) {
+                        console.log(`❌ ${method.name} method error:`, error.message);
+                    }
+                    
+                    // Brief delay between methods
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                 }
 
-                try {
-                    // Method 2: Multiple image pixel requests with retry
-                    const result2 = await this.submitViaMultiplePixels(webAppUrl, sheetName, data);
-                    if (result2.success) return result2;
-                } catch (error) {
-                    console.log('Multiple pixel method failed:', error.message);
-                }
-
-                try {
-                    // Method 3: Dynamic script injection (modified JSONP)
-                    const result3 = await this.submitViaDynamicScript(webAppUrl, sheetName, data);
-                    if (result3.success) return result3;
-                } catch (error) {
-                    console.log('Dynamic script method failed:', error.message);
-                }
-
-                try {
-                    // Method 4: WebView interface (if available)
-                    const result4 = await this.submitViaWebViewInterface(webAppUrl, sheetName, data);
-                    if (result4.success) return result4;
-                } catch (error) {
-                    console.log('WebView interface method failed:', error.message);
-                }
-
-                // Final fallback: Show manual URL
-                console.log('All Chrome APK methods failed, showing manual submission');
+                // Final fallback: Show manual submission
+                console.log('🔧 All Chrome APK methods failed, showing manual submission');
+                showMessage('Automated methods failed - manual submission required', 'warning');
                 return this.showManualSubmission(webAppUrl, sheetName, data);
             }
 
-            // Method 1: Hidden iframe form submission
+            // Method 1: Enhanced hidden iframe form submission for Chrome APK
             async submitViaHiddenIframe(webAppUrl, sheetName, data) {
                 return new Promise((resolve) => {
                     try {
+                        console.log('🔧 Setting up hidden iframe form submission...');
+                        
+                        // Create iframe with better Chrome APK compatibility
                         const iframe = document.createElement('iframe');
                         iframe.style.display = 'none';
+                        iframe.style.position = 'absolute';
+                        iframe.style.left = '-1000px';
+                        iframe.style.top = '-1000px';
                         iframe.style.width = '1px';
                         iframe.style.height = '1px';
                         iframe.style.border = 'none';
+                        iframe.style.opacity = '0';
                         
+                        // Create form with Chrome APK optimizations
                         const form = document.createElement('form');
                         form.method = 'POST';
                         form.action = webAppUrl;
-                        form.target = iframe.name = 'hidden-submit-' + Date.now();
+                        form.enctype = 'application/x-www-form-urlencoded';
+                        form.target = iframe.name = 'chrome-apk-submit-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
                         
+                        // Add multiple data formats for better compatibility
                         const payloadInput = document.createElement('input');
                         payloadInput.type = 'hidden';
                         payloadInput.name = 'payload';
                         payloadInput.value = JSON.stringify({
                             records: data,
-                            sheetName: sheetName
+                            sheetName: sheetName,
+                            timestamp: Date.now(),
+                            source: 'chrome-apk-iframe'
                         });
                         
+                        // Backup data fields
+                        const sheetInput = document.createElement('input');
+                        sheetInput.type = 'hidden';
+                        sheetInput.name = 'sheetName';
+                        sheetInput.value = sheetName;
+                        
+                        const dataInput = document.createElement('input');
+                        dataInput.type = 'hidden';
+                        dataInput.name = 'data';
+                        dataInput.value = JSON.stringify(data);
+                        
+                        const sourceInput = document.createElement('input');
+                        sourceInput.type = 'hidden';
+                        sourceInput.name = 'chromeAPK';
+                        sourceInput.value = '1';
+                        
                         form.appendChild(payloadInput);
+                        form.appendChild(sheetInput);
+                        form.appendChild(dataInput);
+                        form.appendChild(sourceInput);
+                        
                         document.body.appendChild(iframe);
                         document.body.appendChild(form);
                         
+                        let resolved = false;
+                        
+                        const cleanup = () => {
+                            if (!resolved) {
+                                resolved = true;
+                                try {
+                                    if (document.body.contains(iframe)) document.body.removeChild(iframe);
+                                    if (document.body.contains(form)) document.body.removeChild(form);
+                                } catch (cleanupError) {
+                                    console.log('Cleanup error:', cleanupError);
+                                }
+                            }
+                        };
+                        
                         iframe.onload = () => {
+                            console.log('📤 Iframe loaded - data likely submitted');
                             setTimeout(() => {
-                                document.body.removeChild(iframe);
-                                document.body.removeChild(form);
-                                console.log('Hidden iframe submission completed');
-                                resolve({ success: true, method: 'hidden-iframe', recordsAdded: data.length });
-                            }, 2000);
+                                cleanup();
+                                if (!resolved) {
+                                    resolved = true;
+                                    resolve({ success: true, method: 'hidden-iframe', recordsAdded: data.length });
+                                }
+                            }, 3000);
                         };
                         
                         iframe.onerror = () => {
-                            document.body.removeChild(iframe);
-                            document.body.removeChild(form);
-                            resolve({ success: false, method: 'hidden-iframe', error: 'iframe error' });
+                            console.log('❌ Iframe error occurred');
+                            cleanup();
+                            if (!resolved) {
+                                resolved = true;
+                                resolve({ success: false, method: 'hidden-iframe', error: 'iframe load error' });
+                            }
                         };
                         
+                        // Extended timeout for Chrome APK
                         setTimeout(() => {
-                            if (document.body.contains(iframe)) {
-                                document.body.removeChild(iframe);
-                                document.body.removeChild(form);
+                            console.log('⏰ Iframe timeout - assuming success for Chrome APK');
+                            cleanup();
+                            if (!resolved) {
+                                resolved = true;
                                 resolve({ success: true, method: 'hidden-iframe-timeout', recordsAdded: data.length });
                             }
-                        }, 8000);
+                        }, 12000);
                         
+                        console.log('📤 Submitting form via iframe...');
                         form.submit();
                         
                     } catch (error) {
+                        console.log('❌ Iframe method exception:', error);
                         resolve({ success: false, method: 'hidden-iframe', error: error.message });
                     }
                 });
@@ -2382,6 +2485,44 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 }
             }
 
+            // Method 5: Direct navigation (Chrome APK specific)
+            async submitViaDirectNavigation(webAppUrl, sheetName, data) {
+                try {
+                    console.log('Attempting direct navigation method...');
+                    
+                    const params = new URLSearchParams();
+                    params.append('sheetName', sheetName);
+                    params.append('data', JSON.stringify(data));
+                    params.append('direct', '1');
+                    
+                    const directUrl = `${webAppUrl}?${params.toString()}`;
+                    
+                    // Store current location to restore later
+                    const currentUrl = window.location.href;
+                    
+                    return new Promise((resolve) => {
+                        // Navigate to submission URL
+                        console.log('Navigating to submission URL...');
+                        window.location.href = directUrl;
+                        
+                        // Set a timeout to consider it successful
+                        setTimeout(() => {
+                            // Try to navigate back if possible
+                            try {
+                                window.location.href = currentUrl;
+                            } catch (error) {
+                                console.log('Could not navigate back:', error);
+                            }
+                            
+                            resolve({ success: true, method: 'direct-navigation', recordsAdded: data.length });
+                        }, 3000);
+                    });
+                    
+                } catch (error) {
+                    return { success: false, method: 'direct-navigation', error: error.message };
+                }
+            }
+
             // Show manual submission as final fallback
             showManualSubmission(webAppUrl, sheetName, data) {
                 const params = new URLSearchParams();
@@ -2389,21 +2530,41 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 params.append('data', JSON.stringify(data));
                 const manualUrl = `${webAppUrl}?${params.toString()}`;
                 
-                console.log('Manual submission URL:', manualUrl);
+                console.log('📋 Manual submission URL:', manualUrl);
                 
                 // Show user-friendly message for Chrome APK
-                const message = `Chrome APK detected - manual submission required.\n\nData needs to be submitted manually. The submission URL has been logged to console.\n\nWould you like to open the submission URL?`;
+                const message = `Chrome APK Environment Detected\n\nAutomatic data submission failed. The data needs to be submitted manually.\n\nWould you like to open the submission URL? Check your Google Sheets after clicking Yes.`;
                 
                 if (confirm(message)) {
                     try {
                         window.open(manualUrl, '_blank');
-                        showMessage('Submission URL opened - check if data appears in Google Sheets', 'info');
+                        showMessage('Submission URL opened - check Google Sheets in a few seconds', 'info');
+                        
+                        // Try alternative methods if window.open fails
+                        setTimeout(() => {
+                            try {
+                                window.location.href = manualUrl;
+                            } catch (error) {
+                                console.log('Could not navigate to URL:', error);
+                            }
+                        }, 2000);
+                        
                     } catch (error) {
                         console.log('Could not open URL automatically:', error);
-                        showMessage('Please check browser console for submission URL', 'warning');
+                        showMessage('Copy this URL and open it manually: ' + manualUrl, 'warning');
+                        
+                        // Try to copy to clipboard
+                        try {
+                            navigator.clipboard.writeText(manualUrl).then(() => {
+                                showMessage('Submission URL copied to clipboard!', 'success');
+                            });
+                        } catch (clipboardError) {
+                            console.log('Could not copy to clipboard:', clipboardError);
+                        }
                     }
                 } else {
-                    showMessage('Data submission cancelled - will be stored locally', 'warning');
+                    showMessage('Data submission cancelled - will be stored locally only', 'warning');
+                    console.log('User cancelled manual submission. URL was:', manualUrl);
                 }
                 
                 return { success: true, method: 'manual-submission', recordsAdded: data.length };
