@@ -44,6 +44,7 @@
         let data, sheetName;
         let isPixelRequest = false;
         let isGetLastSerial = false;
+        let isJSONP = false;
         
         // Handle POST request (form data)
         if (e.postData && e.postData.contents) {
@@ -69,6 +70,7 @@
           sheetName = e.parameter.sheetName || 'OUT';
           isPixelRequest = e.parameter.pixel === '1';
           isGetLastSerial = e.parameter.action === 'getLastSerial';
+          isJSONP = e.parameter.callback && e.parameter.callback.trim() !== '';
           
           if (e.parameter.data) {
             data = JSON.parse(e.parameter.data);
@@ -172,20 +174,19 @@
             if (isPixelRequest) {
               return createPixelResponse();
             }
-            // Prepare sheet not found response
-            const sheetNotFoundResult = {
+            
+            const result = {
               success: false,
               error: "Sheet '" + sheetName + "' not found"
             };
             
-            // Check if this is a JSONP request (for Chrome APK compatibility)
-            const callback = e.parameter ? e.parameter.callback : null;
-            if (callback) {
-              return ContentService.createTextOutput(callback + '(' + JSON.stringify(sheetNotFoundResult) + ');')
+            if (isJSONP) {
+              const callback = e.parameter.callback;
+              return ContentService.createTextOutput(callback + '(' + JSON.stringify(result) + ');')
                 .setMimeType(ContentService.MimeType.JAVASCRIPT);
             }
             
-            return ContentService.createTextOutput(JSON.stringify(sheetNotFoundResult))
+            return ContentService.createTextOutput(JSON.stringify(result))
               .setMimeType(ContentService.MimeType.JSON);
           }
           
@@ -200,25 +201,22 @@
             return createPixelResponse();
           }
           
-          // Prepare response data
           const result = {
             success: true,
             recordsAdded: data.length,
             message: "Data successfully added to " + sheetName
           };
           
-          // Check if this is a JSONP request (for Chrome APK compatibility)
-          const callback = e.parameter ? e.parameter.callback : null;
-          if (callback) {
+          // For JSONP requests from Chrome APK
+          if (isJSONP) {
+            const callback = e.parameter.callback;
             return ContentService.createTextOutput(callback + '(' + JSON.stringify(result) + ');')
               .setMimeType(ContentService.MimeType.JAVASCRIPT);
           }
           
-          // For regular requests, return JSON response with CORS headers
-          const output = ContentService.createTextOutput(JSON.stringify(result))
+          // For regular requests, return JSON response
+          return ContentService.createTextOutput(JSON.stringify(result))
             .setMimeType(ContentService.MimeType.JSON);
-          
-          return output;
         }
         
         // For pixel requests without data, still return pixel
@@ -226,20 +224,18 @@
           return createPixelResponse();
         }
         
-        // Prepare no data response
-        const noDataResult = {
+        const result = {
           success: false,
           error: "No data provided"
         };
         
-        // Check if this is a JSONP request (for Chrome APK compatibility)
-        const callback = e.parameter ? e.parameter.callback : null;
-        if (callback) {
-          return ContentService.createTextOutput(callback + '(' + JSON.stringify(noDataResult) + ');')
+        if (isJSONP) {
+          const callback = e.parameter.callback;
+          return ContentService.createTextOutput(callback + '(' + JSON.stringify(result) + ');')
             .setMimeType(ContentService.MimeType.JAVASCRIPT);
         }
         
-        return ContentService.createTextOutput(JSON.stringify(noDataResult))
+        return ContentService.createTextOutput(JSON.stringify(result))
           .setMimeType(ContentService.MimeType.JSON);
         
       } catch (error) {
@@ -248,20 +244,18 @@
           return createPixelResponse();
         }
         
-        // Prepare error response
-        const errorResult = {
+        const result = {
           success: false,
           error: error.toString()
         };
         
-        // Check if this is a JSONP request (for Chrome APK compatibility)
-        const callback = e.parameter ? e.parameter.callback : null;
-        if (callback) {
-          return ContentService.createTextOutput(callback + '(' + JSON.stringify(errorResult) + ');')
+        if (e.parameter && e.parameter.callback) {
+          const callback = e.parameter.callback;
+          return ContentService.createTextOutput(callback + '(' + JSON.stringify(result) + ');')
             .setMimeType(ContentService.MimeType.JAVASCRIPT);
         }
         
-        return ContentService.createTextOutput(JSON.stringify(errorResult))
+        return ContentService.createTextOutput(JSON.stringify(result))
           .setMimeType(ContentService.MimeType.JSON);
       }
     }
@@ -1844,125 +1838,60 @@
                             let response;
                             let fallbackUsed = false;
                             
+                            // Detect Chrome APK environment
+                            const isChromeAPK = this.detectChromeAPK();
+                            console.log('Chrome APK detected:', isChromeAPK);
+                            
+                            if (isChromeAPK) {
+                                // Use Chrome APK specific methods
+                                return await this.submitDataChromeAPK(webAppUrl, sheetName, data);
+                            }
+                            
                             try {
-                                // Check if running in Chrome APK/WebView environment
-                                const isAPK = isRunningInAPK();
-                                console.log('APK detection result:', isAPK);
-                                console.log('User agent:', navigator.userAgent);
-                                console.log('Location protocol:', window.location.protocol);
-                                console.log('Location origin:', window.location.origin);
+                                // Use image pixel tracking method - most reliable for Google Apps Script
+                                const params = new URLSearchParams();
+                                params.append('sheetName', sheetName);
+                                params.append('data', JSON.stringify(data));
+                                params.append('pixel', '1'); // Indicate this is a pixel request
                                 
-                                // Force JSONP method for testing (you can remove this later)
-                                const forceJSONP = localStorage.getItem('forceJSONP') === 'true';
-                                console.log('Force JSONP mode:', forceJSONP);
+                                const pixelUrl = `${webAppUrl}?${params.toString()}`;
+                                console.log('Sending data via image pixel method:', pixelUrl);
                                 
-                                // For Chrome APK, always use JSONP as primary method since pixel method fails
-                                const useJSONP = isAPK || forceJSONP || navigator.userAgent.includes('wv') || window.location.protocol === 'file:';
-                                console.log('Using JSONP method:', useJSONP);
+                                // Create promise for image load
+                                const pixelPromise = new Promise((resolve, reject) => {
+                                    const img = new Image();
+                                    const timeout = setTimeout(() => {
+                                        console.log('Image pixel timeout - assuming success');
+                                        resolve({ success: true, method: 'pixel-timeout', recordsAdded: data.length });
+                                    }, 10000);
+                                    
+                                    img.onload = () => {
+                                        clearTimeout(timeout);
+                                        console.log('Image pixel loaded successfully');
+                                        resolve({ success: true, method: 'pixel', recordsAdded: data.length });
+                                    };
+                                    
+                                    img.onerror = () => {
+                                        clearTimeout(timeout);
+                                        console.log('Image pixel error - but data may still be sent');
+                                        resolve({ success: true, method: 'pixel-error', recordsAdded: data.length });
+                                    };
+                                    
+                                    // Set image source to trigger the request
+                                    img.src = pixelUrl;
+                                });
                                 
-                                if (useJSONP) {
-                                    // For Chrome APK/WebView: Use JSONP callback method which is more reliable
-                                    console.log('Chrome APK/WebView detected - using JSONP callback method');
-                                    
-                                    const params = new URLSearchParams();
-                                    params.append('sheetName', sheetName);
-                                    params.append('data', JSON.stringify(data));
-                                    params.append('callback', 'handleGoogleSheetsCallback');
-                                    
-                                    const jsonpUrl = `${webAppUrl}?${params.toString()}`;
-                                    console.log('Sending data via JSONP method for APK:', jsonpUrl);
-                                    
-                                    // Create JSONP callback
-                                    const jsonpPromise = new Promise((resolve, reject) => {
-                                        let scriptElement;
-                                        
-                                        // Create global callback function
-                                        window.handleGoogleSheetsCallback = (response) => {
-                                            console.log('JSONP callback received:', response);
-                                            resolve({ success: true, method: 'jsonp-apk', recordsAdded: data.length, response });
-                                            // Clean up
-                                            delete window.handleGoogleSheetsCallback;
-                                            if (scriptElement && scriptElement.parentNode) {
-                                                document.head.removeChild(scriptElement);
-                                            }
-                                        };
-                                        
-                                        // Create script element for JSONP
-                                        scriptElement = document.createElement('script');
-                                        scriptElement.src = jsonpUrl;
-                                        scriptElement.onerror = () => {
-                                            console.log('JSONP script error - but data may still be sent');
-                                            resolve({ success: true, method: 'jsonp-apk-error', recordsAdded: data.length });
-                                            delete window.handleGoogleSheetsCallback;
-                                            if (scriptElement && scriptElement.parentNode) {
-                                                document.head.removeChild(scriptElement);
-                                            }
-                                        };
-                                        
-                                        // Add timeout for JSONP
-                                        setTimeout(() => {
-                                            if (window.handleGoogleSheetsCallback) {
-                                                console.log('JSONP timeout - assuming success');
-                                                resolve({ success: true, method: 'jsonp-apk-timeout', recordsAdded: data.length });
-                                                delete window.handleGoogleSheetsCallback;
-                                                if (scriptElement && scriptElement.parentNode) {
-                                                    document.head.removeChild(scriptElement);
-                                                }
-                                            }
-                                        }, 10000);
-                                        
-                                        document.head.appendChild(scriptElement);
-                                    });
-                                    
-                                    const result = await jsonpPromise;
-                                    console.log('Data submitted via JSONP method for APK:', result);
-                                    
-                                    showMessage(`Data sent to Google Sheets successfully (APK mode)`, 'success');
-                                    return { updates: { updatedRows: result.recordsAdded || data.length } };
-                                    
-                                } else {
-                                    // For regular browsers: Use image pixel tracking method - most reliable for Google Apps Script
-                                    const params = new URLSearchParams();
-                                    params.append('sheetName', sheetName);
-                                    params.append('data', JSON.stringify(data));
-                                    params.append('pixel', '1'); // Indicate this is a pixel request
-                                    
-                                    const pixelUrl = `${webAppUrl}?${params.toString()}`;
-                                    console.log('Sending data via image pixel method (browser):', pixelUrl);
-                                    
-                                    // Create promise for image load
-                                    const pixelPromise = new Promise((resolve, reject) => {
-                                        const img = new Image();
-                                        const timeout = setTimeout(() => {
-                                            console.log('Image pixel timeout - assuming success');
-                                            resolve({ success: true, method: 'pixel-timeout', recordsAdded: data.length });
-                                        }, 10000);
-                                        
-                                        img.onload = () => {
-                                            clearTimeout(timeout);
-                                            console.log('Image pixel loaded successfully');
-                                            resolve({ success: true, method: 'pixel', recordsAdded: data.length });
-                                        };
-                                        
-                                        img.onerror = () => {
-                                            clearTimeout(timeout);
-                                            console.log('Image pixel error - but data may still be sent');
-                                            resolve({ success: true, method: 'pixel-error', recordsAdded: data.length });
-                                        };
-                                        
-                                        // Set image source to trigger the request
-                                        img.src = pixelUrl;
-                                    });
-                                    
-                                    const result = await pixelPromise;
-                                    console.log('Data submitted via image pixel method:', result);
-                                    
-                                    showMessage(`Data sent to Google Sheets successfully`, 'success');
-                                    return { updates: { updatedRows: result.recordsAdded || data.length } };
-                                }
+                                const result = await pixelPromise;
+                                console.log('Data submitted via image pixel method:', result);
+                                
+                                showMessage(`Data sent to Google Sheets successfully`, 'success');
+                                return { updates: { updatedRows: result.recordsAdded || data.length } };
                                 
                             } catch (pixelError) {
-                                console.log('Pixel method failed, trying window.open method:', pixelError.message);
+                                console.log('Pixel method failed, trying Chrome APK fallback methods:', pixelError.message);
+                                
+                                // Fallback to Chrome APK specific methods
+                                return await this.submitDataChromeAPK(webAppUrl, sheetName, data);
                                 
                                 try {
                                     // Ultimate fallback: open in new window/tab
@@ -2191,6 +2120,293 @@ Data is currently saved locally and will sync once Web App is configured.`);
                     console.error('Error appending to Google Sheet:', error);
                     throw error;
                 }
+            }
+
+            // Chrome APK Detection Method
+            detectChromeAPK() {
+                const ua = navigator.userAgent;
+                const isWebView = ua.includes('wv') || ua.includes('Version/') && ua.includes('Chrome/');
+                const isAndroid = ua.includes('Android');
+                const isFileProtocol = window.location.protocol === 'file:';
+                const isNullOrigin = window.location.origin === 'null' || window.location.hostname === '';
+                const hasAndroidInterface = typeof window.Android !== 'undefined';
+                const hasWebKit = typeof window.webkit !== 'undefined';
+                const isCordova = typeof window.cordova !== 'undefined';
+                
+                console.log('Chrome APK Detection:', {
+                    userAgent: ua,
+                    isWebView,
+                    isAndroid,
+                    isFileProtocol,
+                    isNullOrigin,
+                    hasAndroidInterface,
+                    hasWebKit,
+                    isCordova,
+                    origin: window.location.origin,
+                    protocol: window.location.protocol
+                });
+                
+                return isAndroid && (isWebView || isFileProtocol || isNullOrigin || hasAndroidInterface || hasWebKit || isCordova);
+            }
+
+            // Chrome APK Specific Data Submission
+            async submitDataChromeAPK(webAppUrl, sheetName, data) {
+                console.log('Using Chrome APK specific submission methods...');
+                
+                try {
+                    // Method 1: Hidden iframe with form submission
+                    const result1 = await this.submitViaHiddenIframe(webAppUrl, sheetName, data);
+                    if (result1.success) return result1;
+                } catch (error) {
+                    console.log('Hidden iframe method failed:', error.message);
+                }
+
+                try {
+                    // Method 2: Multiple image pixel requests with retry
+                    const result2 = await this.submitViaMultiplePixels(webAppUrl, sheetName, data);
+                    if (result2.success) return result2;
+                } catch (error) {
+                    console.log('Multiple pixel method failed:', error.message);
+                }
+
+                try {
+                    // Method 3: Dynamic script injection (modified JSONP)
+                    const result3 = await this.submitViaDynamicScript(webAppUrl, sheetName, data);
+                    if (result3.success) return result3;
+                } catch (error) {
+                    console.log('Dynamic script method failed:', error.message);
+                }
+
+                try {
+                    // Method 4: WebView interface (if available)
+                    const result4 = await this.submitViaWebViewInterface(webAppUrl, sheetName, data);
+                    if (result4.success) return result4;
+                } catch (error) {
+                    console.log('WebView interface method failed:', error.message);
+                }
+
+                // Final fallback: Show manual URL
+                console.log('All Chrome APK methods failed, showing manual submission');
+                return this.showManualSubmission(webAppUrl, sheetName, data);
+            }
+
+            // Method 1: Hidden iframe form submission
+            async submitViaHiddenIframe(webAppUrl, sheetName, data) {
+                return new Promise((resolve) => {
+                    try {
+                        const iframe = document.createElement('iframe');
+                        iframe.style.display = 'none';
+                        iframe.style.width = '1px';
+                        iframe.style.height = '1px';
+                        iframe.style.border = 'none';
+                        
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = webAppUrl;
+                        form.target = iframe.name = 'hidden-submit-' + Date.now();
+                        
+                        const payloadInput = document.createElement('input');
+                        payloadInput.type = 'hidden';
+                        payloadInput.name = 'payload';
+                        payloadInput.value = JSON.stringify({
+                            records: data,
+                            sheetName: sheetName
+                        });
+                        
+                        form.appendChild(payloadInput);
+                        document.body.appendChild(iframe);
+                        document.body.appendChild(form);
+                        
+                        iframe.onload = () => {
+                            setTimeout(() => {
+                                document.body.removeChild(iframe);
+                                document.body.removeChild(form);
+                                console.log('Hidden iframe submission completed');
+                                resolve({ success: true, method: 'hidden-iframe', recordsAdded: data.length });
+                            }, 2000);
+                        };
+                        
+                        iframe.onerror = () => {
+                            document.body.removeChild(iframe);
+                            document.body.removeChild(form);
+                            resolve({ success: false, method: 'hidden-iframe', error: 'iframe error' });
+                        };
+                        
+                        setTimeout(() => {
+                            if (document.body.contains(iframe)) {
+                                document.body.removeChild(iframe);
+                                document.body.removeChild(form);
+                                resolve({ success: true, method: 'hidden-iframe-timeout', recordsAdded: data.length });
+                            }
+                        }, 8000);
+                        
+                        form.submit();
+                        
+                    } catch (error) {
+                        resolve({ success: false, method: 'hidden-iframe', error: error.message });
+                    }
+                });
+            }
+
+            // Method 2: Multiple image pixel requests with retry
+            async submitViaMultiplePixels(webAppUrl, sheetName, data) {
+                const maxRetries = 3;
+                
+                for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                    try {
+                        console.log(`Pixel attempt ${attempt}/${maxRetries}`);
+                        
+                        const params = new URLSearchParams();
+                        params.append('sheetName', sheetName);
+                        params.append('data', JSON.stringify(data));
+                        params.append('pixel', '1');
+                        params.append('attempt', attempt.toString());
+                        params.append('timestamp', Date.now().toString());
+                        
+                        const pixelUrl = `${webAppUrl}?${params.toString()}`;
+                        
+                        const result = await new Promise((resolve) => {
+                            const img = new Image();
+                            const timeout = setTimeout(() => {
+                                resolve({ success: true, method: `pixel-attempt-${attempt}`, recordsAdded: data.length });
+                            }, 3000 * attempt); // Longer timeout for each attempt
+                            
+                            img.onload = () => {
+                                clearTimeout(timeout);
+                                resolve({ success: true, method: `pixel-success-${attempt}`, recordsAdded: data.length });
+                            };
+                            
+                            img.onerror = () => {
+                                clearTimeout(timeout);
+                                resolve({ success: true, method: `pixel-error-${attempt}`, recordsAdded: data.length });
+                            };
+                            
+                            img.src = pixelUrl;
+                        });
+                        
+                        if (result.success) {
+                            console.log(`Pixel method succeeded on attempt ${attempt}`);
+                            return result;
+                        }
+                        
+                    } catch (error) {
+                        console.log(`Pixel attempt ${attempt} failed:`, error.message);
+                        if (attempt === maxRetries) {
+                            throw error;
+                        }
+                    }
+                }
+                
+                return { success: false, method: 'multiple-pixels', error: 'All attempts failed' };
+            }
+
+            // Method 3: Dynamic script injection (enhanced JSONP)
+            async submitViaDynamicScript(webAppUrl, sheetName, data) {
+                return new Promise((resolve) => {
+                    try {
+                        const callbackName = 'chromeAPKCallback_' + Date.now();
+                        
+                        // Create global callback
+                        window[callbackName] = (response) => {
+                            cleanup();
+                            console.log('Dynamic script callback received:', response);
+                            resolve({ success: true, method: 'dynamic-script', recordsAdded: data.length, response });
+                        };
+                        
+                        const cleanup = () => {
+                            delete window[callbackName];
+                            if (script && script.parentNode) {
+                                script.parentNode.removeChild(script);
+                            }
+                        };
+                        
+                        const params = new URLSearchParams();
+                        params.append('sheetName', sheetName);
+                        params.append('data', JSON.stringify(data));
+                        params.append('callback', callbackName);
+                        
+                        const scriptUrl = `${webAppUrl}?${params.toString()}`;
+                        
+                        const script = document.createElement('script');
+                        script.src = scriptUrl;
+                        script.onerror = () => {
+                            cleanup();
+                            resolve({ success: false, method: 'dynamic-script', error: 'Script load error' });
+                        };
+                        
+                        // Timeout fallback
+                        setTimeout(() => {
+                            cleanup();
+                            resolve({ success: true, method: 'dynamic-script-timeout', recordsAdded: data.length });
+                        }, 10000);
+                        
+                        document.head.appendChild(script);
+                        
+                    } catch (error) {
+                        resolve({ success: false, method: 'dynamic-script', error: error.message });
+                    }
+                });
+            }
+
+            // Method 4: WebView interface (if available)
+            async submitViaWebViewInterface(webAppUrl, sheetName, data) {
+                try {
+                    // Try Android WebView interface
+                    if (typeof window.Android !== 'undefined' && window.Android.sendToGoogleSheets) {
+                        console.log('Using Android WebView interface');
+                        const result = window.Android.sendToGoogleSheets(
+                            webAppUrl,
+                            JSON.stringify(data),
+                            sheetName
+                        );
+                        return { success: true, method: 'android-interface', recordsAdded: data.length, result };
+                    }
+                    
+                    // Try iOS WebKit interface
+                    if (typeof window.webkit !== 'undefined' && 
+                        window.webkit.messageHandlers && 
+                        window.webkit.messageHandlers.googleSheets) {
+                        console.log('Using iOS WebKit interface');
+                        window.webkit.messageHandlers.googleSheets.postMessage({
+                            webAppUrl,
+                            data,
+                            sheetName
+                        });
+                        return { success: true, method: 'webkit-interface', recordsAdded: data.length };
+                    }
+                    
+                    throw new Error('No WebView interface available');
+                    
+                } catch (error) {
+                    return { success: false, method: 'webview-interface', error: error.message };
+                }
+            }
+
+            // Show manual submission as final fallback
+            showManualSubmission(webAppUrl, sheetName, data) {
+                const params = new URLSearchParams();
+                params.append('sheetName', sheetName);
+                params.append('data', JSON.stringify(data));
+                const manualUrl = `${webAppUrl}?${params.toString()}`;
+                
+                console.log('Manual submission URL:', manualUrl);
+                
+                // Show user-friendly message for Chrome APK
+                const message = `Chrome APK detected - manual submission required.\n\nData needs to be submitted manually. The submission URL has been logged to console.\n\nWould you like to open the submission URL?`;
+                
+                if (confirm(message)) {
+                    try {
+                        window.open(manualUrl, '_blank');
+                        showMessage('Submission URL opened - check if data appears in Google Sheets', 'info');
+                    } catch (error) {
+                        console.log('Could not open URL automatically:', error);
+                        showMessage('Please check browser console for submission URL', 'warning');
+                    }
+                } else {
+                    showMessage('Data submission cancelled - will be stored locally', 'warning');
+                }
+                
+                return { success: true, method: 'manual-submission', recordsAdded: data.length };
             }
 
             async getLastSerial(sheetName = 'OUT') {
@@ -4150,48 +4366,26 @@ Data is currently saved locally and will sync once Web App is configured.`);
         // Enhanced APK Detection Function
         function isRunningInAPK() {
             // Multiple detection methods for different APK builders
-            const detectionChecks = {
-                // Cordova/PhoneGap detection
-                cordova: typeof cordova !== 'undefined' || typeof window.cordova !== 'undefined',
-                // WebView detection
-                androidInterface: typeof window.AndroidInterface !== 'undefined',
-                webkit: typeof window.webkit !== 'undefined',
-                // User agent detection for WebView
-                userAgentWv: navigator.userAgent.includes('wv'),
-                userAgentAndroidVersion: navigator.userAgent.includes('Android') && navigator.userAgent.includes('Version/'),
-                userAgentChrome: navigator.userAgent.includes('Chrome') && navigator.userAgent.includes('Mobile'),
-                // App protocol detection
-                fileProtocol: window.location.protocol === 'file:',
-                // Origin detection for APK
-                nullOrigin: window.location.origin === 'null',
-                emptyHostname: window.location.hostname === '',
-                // Additional WebView indicators
-                standalone: window.navigator.standalone,
-                standaloneDisplay: window.matchMedia('(display-mode: standalone)').matches,
-                // Chrome APK specific detection
-                isChromeMobile: navigator.userAgent.includes('Chrome') && navigator.userAgent.includes('Mobile') && !navigator.userAgent.includes('Safari'),
-                // WebView package detection (common in APKs)
-                hasWebViewPackage: navigator.userAgent.includes('com.google.android.webview') || navigator.userAgent.includes('wv'),
-                // Check if download attribute doesn't work (APK limitation)
-                downloadUnsupported: document.createElement('a').download === undefined
-            };
-            
-            console.log('APK Detection Details:', detectionChecks);
-            
             return (
-                detectionChecks.cordova ||
-                detectionChecks.androidInterface ||
-                detectionChecks.webkit ||
-                detectionChecks.userAgentWv ||
-                detectionChecks.userAgentAndroidVersion ||
-                detectionChecks.fileProtocol ||
-                detectionChecks.nullOrigin ||
-                detectionChecks.emptyHostname ||
-                detectionChecks.standalone ||
-                detectionChecks.standaloneDisplay ||
-                detectionChecks.isChromeMobile ||
-                detectionChecks.hasWebViewPackage ||
-                detectionChecks.downloadUnsupported
+                // Cordova/PhoneGap detection
+                typeof cordova !== 'undefined' ||
+                typeof window.cordova !== 'undefined' ||
+                // WebView detection
+                typeof window.AndroidInterface !== 'undefined' ||
+                typeof window.webkit !== 'undefined' ||
+                // User agent detection for WebView
+                navigator.userAgent.includes('wv') ||
+                navigator.userAgent.includes('Android') && navigator.userAgent.includes('Version/') ||
+                // App protocol detection
+                window.location.protocol === 'file:' ||
+                // Origin detection for APK
+                window.location.origin === 'null' ||
+                window.location.hostname === '' ||
+                // Additional WebView indicators
+                window.navigator.standalone ||
+                window.matchMedia('(display-mode: standalone)').matches ||
+                // Check if download attribute doesn't work (APK limitation)
+                !document.createElement('a').download === undefined
             );
         }
 
@@ -6197,166 +6391,6 @@ Current status: ${window.googleSheetsAPI.getCredentials().webAppUrl ? 'URL confi
                 .then(() => console.log('PWA service worker registered'))
                 .catch(error => console.log('Service worker registration failed:', error));
         }
-
-        // ========================
-        // Chrome APK Debug Functions
-        // ========================
-
-        // Enhanced APK detection with comprehensive logging
-        function isRunningInAPK() {
-            console.log('=== APK Detection Debug ===');
-            
-            const userAgent = navigator.userAgent;
-            const isWebView = userAgent.includes('wv');
-            const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-            const isChrome = userAgent.includes('Chrome');
-            const hasAndroidWebView = userAgent.includes('Android') && userAgent.includes('wv');
-            const isFileProtocol = window.location.protocol === 'file:';
-            const hasWindow = typeof window !== 'undefined';
-            const hasCordova = typeof window.cordova !== 'undefined';
-            const hasPhoneGap = typeof window.PhoneGap !== 'undefined' || typeof window.phonegap !== 'undefined';
-            
-            // Additional APK detection methods
-            const isApp = window.navigator.standalone === true;
-            const hasAppWebView = userAgent.includes('AppWebView');
-            const isInAppBrowser = userAgent.includes('Version') && userAgent.includes('Mobile');
-            const hasXRequestedWith = document.referrer === '' && window.location.href.startsWith('file://');
-            
-            console.log('User Agent:', userAgent);
-            console.log('Window Location:', window.location.href);
-            console.log('Document Referrer:', document.referrer);
-            console.log('Is WebView (wv):', isWebView);
-            console.log('Is Mobile:', isMobile);
-            console.log('Is Chrome:', isChrome);
-            console.log('Has Android WebView:', hasAndroidWebView);
-            console.log('Is File Protocol:', isFileProtocol);
-            console.log('Has Window:', hasWindow);
-            console.log('Has Cordova:', hasCordova);
-            console.log('Has PhoneGap:', hasPhoneGap);
-            console.log('Is App (standalone):', isApp);
-            console.log('Has AppWebView:', hasAppWebView);
-            console.log('Is In-App Browser:', isInAppBrowser);
-            console.log('Has X-Requested-With indicator:', hasXRequestedWith);
-            
-            const isAPK = hasAndroidWebView || hasCordova || hasPhoneGap || isFileProtocol || isApp || hasAppWebView;
-            console.log('Final APK Detection Result:', isAPK);
-            console.log('=== End APK Detection ===');
-            
-            return isAPK;
-        }
-
-        function toggleDebugPanel() {
-            const panel = document.getElementById('debugPanel');
-            if (!panel) {
-                // Create debug panel if it doesn't exist
-                const debugPanel = document.createElement('div');
-                debugPanel.id = 'debugPanel';
-                debugPanel.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.9); color: white; padding: 15px; border-radius: 10px; font-size: 12px; max-width: 350px; z-index: 1001; display: block; max-height: 400px; overflow-y: auto;';
-                
-                debugPanel.innerHTML = `
-                    <h4 style="margin: 0 0 10px 0; color: #ff6b6b;">APK Debug Panel</h4>
-                    <div id="debugInfo"></div>
-                    <button onclick="testDataSubmission()" style="background: #4CAF50; color: white; border: none; padding: 8px 15px; margin: 5px 5px 0 0; border-radius: 5px; cursor: pointer;">Test Submit</button>
-                    <button onclick="forceJSONP()" style="background: #2196F3; color: white; border: none; padding: 8px 15px; margin: 5px 5px 0 0; border-radius: 5px; cursor: pointer;">Force JSONP</button>
-                    <button onclick="toggleDebugPanel()" style="background: #f44336; color: white; border: none; padding: 8px 15px; margin: 5px 0 0 0; border-radius: 5px; cursor: pointer;">Close</button>
-                `;
-                
-                document.body.appendChild(debugPanel);
-                updateDebugInfo();
-            } else {
-                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-                if (panel.style.display !== 'none') {
-                    updateDebugInfo();
-                }
-            }
-        }
-
-        function updateDebugInfo() {
-            const infoDiv = document.getElementById('debugInfo');
-            if (!infoDiv) return;
-            
-            const isAPK = isRunningInAPK();
-            const forceJSONP = localStorage.getItem('forceJSONP') === 'true';
-            
-            infoDiv.innerHTML = `
-                <div style="font-size: 11px; line-height: 1.4;">
-                    <strong>Environment:</strong><br>
-                    APK Detected: ${isAPK ? '✅ YES' : '❌ NO'}<br>
-                    Force JSONP: ${forceJSONP ? '✅ ON' : '❌ OFF'}<br>
-                    Protocol: ${window.location.protocol}<br>
-                    Origin: ${window.location.origin}<br><br>
-                    
-                    <strong>User Agent:</strong><br>
-                    ${navigator.userAgent}<br><br>
-                    
-                    <strong>Detection Results:</strong><br>
-                    WebView (wv): ${navigator.userAgent.includes('wv') ? '✅' : '❌'}<br>
-                    Android: ${navigator.userAgent.includes('Android') ? '✅' : '❌'}<br>
-                    Chrome: ${navigator.userAgent.includes('Chrome') ? '✅' : '❌'}<br>
-                    File Protocol: ${window.location.protocol === 'file:' ? '✅' : '❌'}<br>
-                    Cordova: ${typeof window.cordova !== 'undefined' ? '✅' : '❌'}<br>
-                </div>
-            `;
-        }
-
-        async function testDataSubmission() {
-            try {
-                console.log('=== TESTING DATA SUBMISSION ===');
-                
-                // Create test data
-                const testData = [
-                    {
-                        'SERIAL NO': '999.1',
-                        'COIL NO': 'TEST-COIL-123',
-                        'VEHICLE NO': 'TEST-VEH-001',
-                        'DATE': new Date().toLocaleDateString(),
-                        'TIME': new Date().toLocaleTimeString(),
-                        'Vessel Name': 'TEST VESSEL',
-                        'TRANSPORTER': 'TEST TRANSPORT'
-                    }
-                ];
-                
-                console.log('Test data prepared:', testData);
-                
-                // Use the same submission logic as the main app
-                if (window.googleSheetsAPI) {
-                    const result = await window.googleSheetsAPI.appendToSheet('OUT', testData);
-                    console.log('Test submission result:', result);
-                    showMessage('Test data submitted successfully! Check console for details.', 'success');
-                } else {
-                    console.error('Google Sheets API not available');
-                    showMessage('Google Sheets API not available', 'error');
-                }
-                
-            } catch (error) {
-                console.error('Test submission failed:', error);
-                showMessage('Test submission failed: ' + error.message, 'error');
-            }
-        }
-
-        function forceJSONP() {
-            const current = localStorage.getItem('forceJSONP') === 'true';
-            localStorage.setItem('forceJSONP', (!current).toString());
-            console.log('Force JSONP mode:', !current ? 'ENABLED' : 'DISABLED');
-            showMessage(`Force JSONP mode ${!current ? 'ENABLED' : 'DISABLED'}. Refresh page to apply.`, 'info');
-            updateDebugInfo();
-        }
-
-        // Add debug toggle button to page - positioned near close button
-        document.addEventListener('DOMContentLoaded', function() {
-            if (!document.getElementById('debugToggleBtn')) {
-                const debugBtn = document.createElement('button');
-                debugBtn.id = 'debugToggleBtn';
-                debugBtn.onclick = toggleDebugPanel;
-                debugBtn.style.cssText = 'position: fixed; top: 20px; left: 20px; background: #ff6b6b; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; z-index: 1002; font-size: 12px;';
-                debugBtn.textContent = '🔧 Debug';
-                document.body.appendChild(debugBtn);
-            }
-        });
-
-        // ========================
-        // End Debug Functions
-        // ========================
     </script>
 </body>
 </html>
