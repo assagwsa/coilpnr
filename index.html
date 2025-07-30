@@ -836,18 +836,19 @@
 
         /* APK Report Modal - Added for APK compatibility */
         .report-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 2000;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: rgba(0, 0, 0, 0.9) !important;
+            z-index: 99999 !important;
             display: none;
-            flex-direction: column;
+            flex-direction: column !important;
             visibility: hidden;
             opacity: 0;
             transition: opacity 0.3s ease;
+            overflow-y: auto !important;
         }
         
         .report-modal.show {
@@ -857,12 +858,15 @@
         }
 
         .report-modal-header {
-            background: #2c3e50;
-            color: white;
-            padding: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            background: #2c3e50 !important;
+            color: white !important;
+            padding: 15px !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            min-height: 60px !important;
         }
 
         .report-modal-buttons {
@@ -5407,6 +5411,17 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 
                 // Force browser to recalculate layout
                 modal.offsetHeight;
+                
+                // Ensure PDF button is visible on mobile
+                const pdfButton = document.querySelector('.report-modal-pdf');
+                if (pdfButton) {
+                    pdfButton.style.display = 'inline-block !important';
+                    pdfButton.style.visibility = 'visible !important';
+                    pdfButton.style.opacity = '1 !important';
+                    console.log('PDF button visibility ensured for mobile');
+                } else {
+                    console.error('PDF button not found in modal');
+                }
                 
                 console.log('Modal shown with content length:', content.length);
                 console.log('Modal content element:', modalContent);
