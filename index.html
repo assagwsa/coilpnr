@@ -5341,6 +5341,16 @@ Data is currently saved locally and will sync once Web App is configured.`);
             modal.style.display = 'none';
             modal.style.visibility = 'hidden';
             modal.style.opacity = '0';
+            
+            // Reset download button state when modal is closed
+            const downloadBtn = document.querySelector('.report-modal-download');
+            if (downloadBtn && downloadBtn.getAttribute('data-downloaded') === 'true') {
+                downloadBtn.disabled = false;
+                downloadBtn.textContent = 'Download';
+                downloadBtn.style.background = '#27ae60';
+                downloadBtn.style.opacity = '1';
+                downloadBtn.removeAttribute('data-downloaded');
+            }
         }
 
         // Print function for reports
@@ -6070,29 +6080,22 @@ Data is currently saved locally and will sync once Web App is configured.`);
                             link.click();
                             console.log('PDF downloaded to mobile device:', filename);
                             
-                            // Show immediate feedback with better message
-                            showMessage('✓ PDF downloaded successfully!', 'success');
+                            // Show immediate feedback with alert for better visibility
+                            alert('✓ PDF downloaded successfully!\nFile saved to Downloads folder');
                             
-                            // Temporarily disable button to prevent repeated clicks
+                            // Disable button permanently until modal is closed
                             if (downloadBtn) {
                                 downloadBtn.disabled = true;
                                 downloadBtn.textContent = 'Downloaded ✓';
-                                downloadBtn.style.background = '#27ae60';
+                                downloadBtn.style.background = '#219a52';
+                                downloadBtn.style.opacity = '0.7';
+                                // Mark button as downloaded for modal close handler
+                                downloadBtn.setAttribute('data-downloaded', 'true');
                             }
-                            
-                            // Show additional notification and re-enable button
-                            setTimeout(() => {
-                                showMessage('File saved to Downloads folder', 'info');
-                                if (downloadBtn) {
-                                    downloadBtn.disabled = false;
-                                    downloadBtn.textContent = 'Download';
-                                    downloadBtn.style.background = '#27ae60';
-                                }
-                            }, 3000);
                             
                         } catch (mobileError) {
                             console.error('Mobile download failed:', mobileError);
-                            showMessage('Download failed. Please try again.', 'error');
+                            alert('Download failed. Please try again.');
                         }
                         
                         // Clean up
@@ -6161,12 +6164,7 @@ Data is currently saved locally and will sync once Web App is configured.`);
                             link.click();
                             document.body.removeChild(link);
                             console.log('PDF downloaded (popup was blocked)');
-                            showMessage('✓ PDF downloaded successfully!', 'success');
-                            
-                            // Show additional notification
-                            setTimeout(() => {
-                                showMessage('File saved to Downloads folder', 'info');
-                            }, 1500);
+                            alert('✓ PDF downloaded successfully!\nFile saved to Downloads folder');
                         }
                     }
                     
