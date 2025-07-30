@@ -5468,6 +5468,150 @@ Data is currently saved locally and will sync once Web App is configured.`);
             }
         }
 
+        // Function to show built-in PDF viewer for mobile
+        function showBuiltInPDFViewer(pdfUrl, filename) {
+            // Create modal overlay for PDF viewer
+            const pdfModal = document.createElement('div');
+            pdfModal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.9);
+                z-index: 10000;
+                display: flex;
+                flex-direction: column;
+            `;
+            
+            // Create header with controls
+            const header = document.createElement('div');
+            header.style.cssText = `
+                background: #2c3e50;
+                color: white;
+                padding: 10px 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-family: Arial, sans-serif;
+                font-size: 16px;
+            `;
+            
+            const titleSpan = document.createElement('span');
+            titleSpan.textContent = 'PDF Viewer';
+            titleSpan.style.cssText = 'font-weight: bold;';
+            
+            const controlsDiv = document.createElement('div');
+            controlsDiv.style.cssText = 'display: flex; gap: 10px;';
+            
+            // Download button
+            const downloadBtn = document.createElement('button');
+            downloadBtn.textContent = '💾 Save';
+            downloadBtn.style.cssText = `
+                background: #27ae60;
+                color: white;
+                border: none;
+                padding: 8px 12px;
+                border-radius: 4px;
+                font-size: 14px;
+                cursor: pointer;
+            `;
+            downloadBtn.onclick = function() {
+                const link = document.createElement('a');
+                link.href = pdfUrl;
+                link.download = filename;
+                link.click();
+                showMessage('PDF saved to Downloads', 'success');
+            };
+            
+            // Close button
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = '✕ Close';
+            closeBtn.style.cssText = `
+                background: #e74c3c;
+                color: white;
+                border: none;
+                padding: 8px 12px;
+                border-radius: 4px;
+                font-size: 14px;
+                cursor: pointer;
+            `;
+            closeBtn.onclick = function() {
+                document.body.removeChild(pdfModal);
+                URL.revokeObjectURL(pdfUrl);
+            };
+            
+            controlsDiv.appendChild(downloadBtn);
+            controlsDiv.appendChild(closeBtn);
+            header.appendChild(titleSpan);
+            header.appendChild(controlsDiv);
+            
+            // Create PDF iframe
+            const pdfFrame = document.createElement('iframe');
+            pdfFrame.src = pdfUrl;
+            pdfFrame.style.cssText = `
+                width: 100%;
+                height: calc(100% - 60px);
+                border: none;
+                background: white;
+            `;
+            
+            // Handle iframe loading
+            pdfFrame.onload = function() {
+                console.log('PDF loaded in built-in viewer');
+                showMessage('PDF loaded. Use Save button to download', 'info');
+            };
+            
+            pdfFrame.onerror = function() {
+                console.error('Failed to load PDF in iframe');
+                pdfFrame.style.display = 'none';
+                
+                // Create fallback content
+                const fallbackDiv = document.createElement('div');
+                fallbackDiv.style.cssText = `
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100%;
+                    color: white;
+                    font-family: Arial, sans-serif;
+                    text-align: center;
+                    padding: 20px;
+                `;
+                
+                fallbackDiv.innerHTML = `
+                    <h3>PDF Preview Not Available</h3>
+                    <p>Your browser doesn't support PDF preview.<br>Click Save to download the PDF file.</p>
+                    <button onclick="this.parentElement.parentElement.querySelector('button').click()" 
+                            style="background: #27ae60; color: white; border: none; padding: 12px 24px; 
+                                   border-radius: 4px; font-size: 16px; cursor: pointer; margin-top: 15px;">
+                        💾 Download PDF
+                    </button>
+                `;
+                
+                pdfModal.appendChild(fallbackDiv);
+            };
+            
+            // Assemble modal
+            pdfModal.appendChild(header);
+            pdfModal.appendChild(pdfFrame);
+            
+            // Add to page
+            document.body.appendChild(pdfModal);
+            
+            // Handle escape key
+            const handleEscape = function(e) {
+                if (e.key === 'Escape') {
+                    closeBtn.click();
+                    document.removeEventListener('keydown', handleEscape);
+                }
+            };
+            document.addEventListener('keydown', handleEscape);
+            
+            return pdfModal;
+        }
+
         // Enhanced PDF viewer function for mobile/APK compatibility
         function downloadReportAsPDF() {
             try {
@@ -6051,53 +6195,9 @@ Data is currently saved locally and will sync once Web App is configured.`);
                         link.style.display = 'none';
                         document.body.appendChild(link);
                         
-                        // Open PDF in mobile's default PDF viewer for preview
-                        try {
-                            // First try to open in mobile's built-in PDF viewer
-                            const newWindow = window.open(url, '_blank');
-                            if (newWindow) {
-                                console.log('PDF opened in mobile default PDF viewer');
-                                showMessage('PDF opened in PDF viewer. You can save from there if needed', 'success');
-                            } else {
-                                // Fallback: try using intent URL for Android or direct link
-                                if (navigator.userAgent.includes('Android')) {
-                                    // Try Android intent to open with default PDF viewer
-                                    const intentUrl = `intent:${url}#Intent;scheme=https;type=application/pdf;category=android.intent.category.BROWSABLE;end`;
-                                    window.location.href = intentUrl;
-                                    console.log('PDF opened via Android intent');
-                                    showMessage('PDF opened in default PDF viewer', 'success');
-                                } else if (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad')) {
-                                    // For iOS, try opening with Safari's built-in PDF viewer
-                                    try {
-                                        window.location.href = url;
-                                        console.log('PDF opened in iOS Safari PDF viewer');
-                                        showMessage('PDF opened in Safari PDF viewer', 'success');
-                                    } catch (iosError) {
-                                        // iOS fallback to download
-                                        link.click();
-                                        console.log('PDF downloaded as iOS fallback');
-                                        showMessage('PDF downloaded. Tap to open with PDF viewer', 'success');
-                                    }
-                                } else {
-                                    // For other mobile platforms, fallback to download
-                                    link.click();
-                                    console.log('PDF downloaded as fallback on mobile');
-                                    showMessage('PDF downloaded. Tap to open with PDF viewer', 'success');
-                                }
-                            }
-                            
-                        } catch (mobileError) {
-                            // Final fallback: force download
-                            console.error('Mobile PDF preview error:', mobileError);
-                            try {
-                                link.click();
-                                console.log('PDF downloaded as final fallback');
-                                showMessage('PDF downloaded. Tap to open with PDF viewer', 'success');
-                            } catch (downloadError) {
-                                console.error('PDF download fallback failed:', downloadError);
-                                showMessage('Error opening PDF: ' + downloadError.message, 'error');
-                            }
-                        }
+                        // Create built-in PDF viewer for mobile
+                        showBuiltInPDFViewer(url, filename);
+                        console.log('PDF opened in built-in mobile viewer');
                         
                         // Clean up
                         setTimeout(() => {
