@@ -1146,7 +1146,7 @@
             
             <div class="button-row">
                 <button class="third-width" id="saveBtn" onclick="saveVehicleCoils()">Save</button>
-                <button class="third-width" id="generateBtn" onclick="generateTextFile()" disabled>Generate Text</button>
+                <button class="third-width" id="generateBtn" onclick="generateTextFile()" disabled>GCN</button>
                 <button class="third-width" onclick="closeApplication()" style="background-color: #e74c3c;">Close App</button>
             </div>
             <div class="button-row" id="clearVehicleRow" style="display: none;">
@@ -4097,8 +4097,20 @@ Data is currently saved locally and will sync once Web App is configured.`);
                         return sum + (parseFloat(row['GROSS WT']) || 0);
                     }, 0);
                     
+                    // Get the highest serial number for this vehicle
+                    let maxSerial = 0;
+                    vehicleOutData.forEach(entry => {
+                        const serialNo = entry['SERIAL NO'];
+                        if (serialNo) {
+                            const serialValue = parseFloat(serialNo.toString().split('.')[0]);
+                            if (!isNaN(serialValue) && serialValue > maxSerial) {
+                                maxSerial = serialValue;
+                            }
+                        }
+                    });
+                    
                     // Generate content with vessel sections
-                    let content = `Text Report - ${vehicle}\nGenerated on: ${currentDate} ${currentTime}\n\n`;
+                    let content = `GOODS CONSIGNMENT NOTE NO. ${maxSerial} - ${vehicle}\nGenerated on: ${currentDate} ${currentTime}\n\n`;
                     
                     // Add details for each vessel
                     for (const [currentVesselName, vesselCoils] of Object.entries(vesselGroups)) {
@@ -4230,8 +4242,20 @@ Data is currently saved locally and will sync once Web App is configured.`);
                         return sum + (parseFloat(row['GROSS WT']) || 0);
                     }, 0);
                     
+                    // Get the highest serial number for this vehicle
+                    let maxSerial = 0;
+                    vehicleOutData.forEach(entry => {
+                        const serialNo = entry['SERIAL NO'];
+                        if (serialNo) {
+                            const serialValue = parseFloat(serialNo.toString().split('.')[0]);
+                            if (!isNaN(serialValue) && serialValue > maxSerial) {
+                                maxSerial = serialValue;
+                            }
+                        }
+                    });
+                    
                     // Generate simplified content for storage with vessel sections
-                    let content = `Text Report - ${vehicle}\nGenerated on: ${currentDate} ${currentTime}\n\n`;
+                    let content = `GOODS CONSIGNMENT NOTE NO. ${maxSerial} - ${vehicle}\nGenerated on: ${currentDate} ${currentTime}\n\n`;
                     
                     // Add details for each vessel
                     for (const [currentVesselName, vesselCoils] of Object.entries(vesselGroups)) {
@@ -4338,11 +4362,23 @@ Data is currently saved locally and will sync once Web App is configured.`);
                         vesselGroups[vesselName].push(entry);
                     });
                     
+                    // Get the highest serial number for this vehicle
+                    let maxSerial = 0;
+                    vehicleOutData.forEach(entry => {
+                        const serialNo = entry['SERIAL NO'];
+                        if (serialNo) {
+                            const serialValue = parseFloat(serialNo.toString().split('.')[0]);
+                            if (!isNaN(serialValue) && serialValue > maxSerial) {
+                                maxSerial = serialValue;
+                            }
+                        }
+                    });
+                    
                     // Generate HTML content with separate sections for each vessel
                     let content = `<div style="font-family: Arial, sans-serif; padding: 10px;">
                         <h3 style="text-align: center; margin-bottom: 5px;">A.S.Shipping Agencies Pvt Ltd,</h3>
                         <h4 style="text-align: center; margin-top: 0;">(Greenways Group)</h4>
-                        <h3 style="text-align: center; color: #2c3e50;">Text Report - ${vehicle}</h3>
+                        <h3 style="text-align: center; color: #2c3e50;">GOODS CONSIGNMENT NOTE NO. ${maxSerial} - ${vehicle}</h3>
                         <p style="text-align: center; margin: 5px 0;">Generated on: ${currentDate} ${currentTime}</p>`;
                     
                     // Create sections for each vessel
@@ -4414,7 +4450,7 @@ Data is currently saved locally and will sync once Web App is configured.`);
                     </div>`;
                     
                     // Always show in modal for better display of HTML table content
-                    showReportInModal(`Text Report - ${vehicle}`, content);
+                    showReportInModal(`GOODS CONSIGNMENT NOTE NO. ${maxSerial} - ${vehicle}`, content);
                     
                     // Store generated text data for Google Sheets upload  
                     const allVesselNames = Object.keys(vesselGroups).join(', ');
@@ -4924,6 +4960,18 @@ Data is currently saved locally and will sync once Web App is configured.`);
                     vesselGroups[vesselName].push(entry);
                 });
                 
+                // Get the highest serial number for this vehicle
+                let maxSerial = 0;
+                vehicleOutData.forEach(entry => {
+                    const serialNo = entry['SERIAL NO'];
+                    if (serialNo) {
+                        const serialValue = parseFloat(serialNo.toString().split('.')[0]);
+                        if (!isNaN(serialValue) && serialValue > maxSerial) {
+                            maxSerial = serialValue;
+                        }
+                    }
+                });
+                
                 // Generate HTML table format with vessel grouping for vehicle report
                 const currentDate = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
                 const currentTime = new Date().toLocaleTimeString('en-US', { hour12: true });
@@ -4931,7 +4979,7 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 let content = `<div style="font-family: Arial, sans-serif; padding: 10px;">
                     <h3 style="text-align: center; margin-bottom: 5px;">A.S.Shipping Agencies Pvt Ltd,</h3>
                     <h4 style="text-align: center; margin-top: 0;">(Greenways Group)</h4>
-                    <h3 style="text-align: center; color: #2c3e50;">GENERATE VEHICLE REPORT - ${vehicleNumber}${coilSerial ? ` (Serial: ${coilSerial})` : ''}</h3>
+                    <h3 style="text-align: center; color: #2c3e50;">GOODS CONSIGNMENT NOTE NO. ${maxSerial} - ${vehicleNumber}${coilSerial ? ` (Serial: ${coilSerial})` : ''}</h3>
                     <p style="text-align: center; margin: 5px 0;">Generated on: ${currentDate} ${currentTime}</p>`;
                 
                 // Create sections for each vessel within this vehicle
@@ -5001,7 +5049,7 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 </div>`;
                 
                 // Always show in modal for better display
-                showReportInModal(`Text Report - ${vehicleNumber}`, content);
+                showReportInModal(`GOODS CONSIGNMENT NOTE NO. ${maxSerial} - ${vehicleNumber}`, content);
                 
                 showMessage('Vehicle report generated successfully', 'success');
                 
@@ -5395,19 +5443,19 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 const pageWidth = doc.internal.pageSize.getWidth();
                 const centerX = pageWidth / 2;
                 
-                // Add header
-                doc.setFontSize(12);
+                // Add header with increased font sizes for better A4 readability
+                doc.setFontSize(16);
                 doc.setFont(undefined, 'bold');
                 doc.text('A.S.Shipping Agencies Pvt Ltd', centerX, 15, { align: 'center' });
                 doc.text('(Greenways Group)', centerX, 22, { align: 'center' });
                 
                 // Add title
-                doc.setFontSize(11);
+                doc.setFontSize(14);
                 doc.setFont(undefined, 'bold');
                 doc.text(title, centerX, 32, { align: 'center' });
                 
                 // Add generation date
-                doc.setFontSize(9);
+                doc.setFontSize(12);
                 doc.setFont(undefined, 'normal');
                 const currentDate = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
                 const currentTime = new Date().toLocaleTimeString('en-US', { hour12: true });
@@ -5422,6 +5470,27 @@ Data is currently saved locally and will sync once Web App is configured.`);
                         tables.forEach((table, tableIndex) => {
                             if (tableIndex > 0) yPosition += 10;
                             
+                            // Add vessel name detection for view function too
+                            let vesselName = '';
+                            const allTextContent = modalContent.textContent;
+                            
+                            // Search for vessel name in modal content
+                            const vesselPattern = /M\.V\.\s*[A-Z\s\d\.]+|V\.\d+[A-Z]*\w*/gi;
+                            const matches = allTextContent.match(vesselPattern);
+                            if (matches && matches.length > 0) {
+                                vesselName = matches[0].trim();
+                            }
+                            
+                            // Add vessel name if found
+                            if (vesselName) {
+                                doc.setFontSize(13);
+                                doc.setFont(undefined, 'bold');
+                                doc.setTextColor(0, 0, 0);
+                                const cleanVesselName = vesselName.replace('🚢', '').trim();
+                                doc.text(cleanVesselName, centerX, yPosition, { align: 'center' });
+                                yPosition += 8;
+                            }
+                            
                             const rows = Array.from(table.querySelectorAll('tr'));
                             const tableData = rows.map(row => {
                                 return Array.from(row.querySelectorAll('th, td')).map(cell => 
@@ -5434,18 +5503,76 @@ Data is currently saved locally and will sync once Web App is configured.`);
                                     head: [tableData[0]],
                                     body: tableData.slice(1),
                                     startY: yPosition,
-                                    styles: { fontSize: 8, cellPadding: 2 },
-                                    headStyles: { fillColor: [44, 62, 80], textColor: 255, fontSize: 9 },
+                                    styles: { fontSize: 10, cellPadding: 3 },
+                                    headStyles: { fillColor: [44, 62, 80], textColor: 255, fontSize: 11 },
                                     alternateRowStyles: { fillColor: [240, 240, 240] },
                                     margin: { left: 10, right: 10 }
                                 });
                                 yPosition = doc.lastAutoTable.finalY + 10;
                             }
                         });
+                        
+                        // Add summary sections to view PDF as well
+                        let summaryDivs = Array.from(modalContent.querySelectorAll(
+                            'div[style*="background-color: #ecf0f1"], div[style*="background-color:#ecf0f1"], ' +
+                            'div[style*="background-color: #2c3e50"], div[style*="background-color:#2c3e50"]'
+                        ));
+                        
+                        // Find summary divs by content for view function
+                        const allDivs = modalContent.querySelectorAll('div');
+                        allDivs.forEach(div => {
+                            const text = div.textContent || '';
+                            const hasHeading = div.querySelector('h4, h3, h2');
+                            if (hasHeading && (text.includes('Summary') || text.includes('SUMMARY') || text.includes('OVERALL') || text.includes('Total Records') || text.includes('Total Coils') || text.includes('Total Gross Weight'))) {
+                                if (!summaryDivs.includes(div)) {
+                                    summaryDivs.push(div);
+                                }
+                            }
+                        });
+                        
+                        // Process summary sections for view PDF
+                        summaryDivs.forEach(div => {
+                            const summaryTitle = div.querySelector('h4');
+                            if (summaryTitle && (summaryTitle.textContent.includes('Summary') || summaryTitle.textContent.includes('SUMMARY') || summaryTitle.textContent.includes('OVERALL'))) {
+                                // Check if we need a new page
+                                if (yPosition > doc.internal.pageSize.height - 40) {
+                                    doc.addPage();
+                                    yPosition = 15;
+                                }
+                                
+                                // Add summary title with increased font size
+                                doc.setFontSize(13);
+                                doc.setFont(undefined, 'bold');
+                                doc.setTextColor(44, 62, 80);
+                                const cleanTitle = summaryTitle.textContent.replace('📊', '').trim();
+                                doc.text(cleanTitle, 20, yPosition);
+                                yPosition += 8;
+                                
+                                // Add summary content with increased font size
+                                doc.setFontSize(11);
+                                doc.setFont(undefined, 'normal');
+                                doc.setTextColor(0, 0, 0);
+                                
+                                // Handle summary paragraphs
+                                const summaryParagraphs = div.querySelectorAll('p, div:not([style*="display: flex"])');
+                                summaryParagraphs.forEach(p => {
+                                    const text = p.textContent.trim();
+                                    if (text && !text.includes('📊')) {
+                                        const wrappedLines = doc.splitTextToSize(text, pageWidth - 40);
+                                        wrappedLines.forEach((line, lineIndex) => {
+                                            doc.text(line, 20, yPosition + (lineIndex * 7));
+                                        });
+                                        yPosition += (wrappedLines.length * 7) + 3;
+                                    }
+                                });
+                                
+                                yPosition += 8; // Extra gap after summary
+                            }
+                        });
                     }
                 } else {
-                    // Handle plain text content
-                    doc.setFontSize(8);
+                    // Handle plain text content with increased font size
+                    doc.setFontSize(11);
                     doc.setFont(undefined, 'normal');
                     const textContent = modalContent.textContent || modalContent.innerText;
                     const lines = textContent.split('\n').filter(line => line.trim());
@@ -5457,7 +5584,7 @@ Data is currently saved locally and will sync once Web App is configured.`);
                         }
                         const wrappedLines = doc.splitTextToSize(line.trim(), pageWidth - 40);
                         doc.text(wrappedLines, 20, yPosition);
-                        yPosition += (wrappedLines.length * 6) + 2;
+                        yPosition += (wrappedLines.length * 7) + 3;
                     });
                 }
                 
@@ -5525,19 +5652,19 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 const pageWidth = doc.internal.pageSize.getWidth();
                 const centerX = pageWidth / 2;
                 
-                // Add header with reduced gaps
-                doc.setFontSize(12);
+                // Add header with increased font sizes for better A4 readability
+                doc.setFontSize(16);
                 doc.setFont(undefined, 'bold');
                 doc.text('A.S.Shipping Agencies Pvt Ltd', centerX, 15, { align: 'center' });
                 doc.text('(Greenways Group)', centerX, 22, { align: 'center' });
                 
                 // Add title
-                doc.setFontSize(11);
+                doc.setFontSize(14);
                 doc.setFont(undefined, 'bold');
                 doc.text(title, centerX, 32, { align: 'center' });
                 
                 // Add generation date
-                doc.setFontSize(9);
+                doc.setFontSize(12);
                 doc.setFont(undefined, 'normal');
                 const currentDate = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
                 const currentTime = new Date().toLocaleTimeString('en-US', { hour12: true });
@@ -5557,21 +5684,28 @@ Data is currently saved locally and will sync once Web App is configured.`);
                                 yPosition += 10; // Reduced space between tables
                             }
                             
-                            // Extract vessel information from preceding headings - enhanced detection
+                            // Extract vessel information - comprehensive search
                             let vesselName = '';
                             let vesselSummary = '';
                             
-                            // Look for vessel heading in multiple ways
+                            // First, try to find vessel name in the entire modal content
+                            const allTextContent = modalContent.textContent;
+                            console.log('Searching for vessel name in modal content');
+                            
+                            // Look for vessel name patterns in various ways
+                            // Method 1: Search in headings before table
                             let searchElement = table.previousElementSibling;
                             let searchDepth = 0;
                             
-                            while (searchElement && searchDepth < 5) {
-                                const textContent = searchElement.textContent;
+                            while (searchElement && searchDepth < 10) {
+                                const textContent = searchElement.textContent || '';
                                 
                                 // Check for vessel name patterns
                                 if (textContent.includes('🚢') || textContent.includes('VESSEL') || 
-                                    textContent.includes('M.V.') || textContent.includes('V.')) {
+                                    textContent.includes('M.V.') || textContent.includes('V.') ||
+                                    textContent.includes('vessel') || textContent.includes('ship')) {
                                     vesselName = textContent.replace('🚢', '').trim();
+                                    console.log('Found vessel name from sibling:', vesselName);
                                     break;
                                 }
                                 
@@ -5582,6 +5716,40 @@ Data is currently saved locally and will sync once Web App is configured.`);
                                 
                                 searchElement = searchElement.previousElementSibling;
                                 searchDepth++;
+                            }
+                            
+                            // Method 2: Search in all heading elements in modal
+                            if (!vesselName) {
+                                const headings = modalContent.querySelectorAll('h1, h2, h3, h4, h5, h6, div[style*="font-weight: bold"], div[style*="font-weight:bold"]');
+                                headings.forEach(heading => {
+                                    const text = heading.textContent || '';
+                                    if ((text.includes('M.V.') || text.includes('V.') || text.includes('🚢') || 
+                                         text.includes('VESSEL') || text.includes('vessel')) && !vesselName) {
+                                        vesselName = text.replace('🚢', '').trim();
+                                        console.log('Found vessel name from heading:', vesselName);
+                                    }
+                                });
+                            }
+                            
+                            // Method 3: Search in entire modal content using regex
+                            if (!vesselName) {
+                                const vesselPattern = /M\.V\.\s*[A-Z\s\d\.]+|V\.\d+[A-Z]*\w*/gi;
+                                const matches = allTextContent.match(vesselPattern);
+                                if (matches && matches.length > 0) {
+                                    vesselName = matches[0].trim();
+                                    console.log('Found vessel name from regex:', vesselName);
+                                }
+                            }
+                            
+                            // Method 4: Look for any text containing ship/vessel keywords
+                            if (!vesselName) {
+                                const lines = allTextContent.split('\n');
+                                lines.forEach(line => {
+                                    if ((line.includes('M.V.') || line.includes('V.') || line.includes('VESSEL')) && !vesselName) {
+                                        vesselName = line.trim();
+                                        console.log('Found vessel name from line:', vesselName);
+                                    }
+                                });
                             }
                             
                             // Add vessel name if found
@@ -5610,22 +5778,37 @@ Data is currently saved locally and will sync once Web App is configured.`);
                                 }
                             }
                             
-                            // Extract headers
-                            const headerRow = table.querySelector('thead tr');
+                            // Extract headers - improved detection
+                            const headerRow = table.querySelector('thead tr') || table.querySelector('tr:first-child');
                             const headers = [];
                             if (headerRow) {
-                                headerRow.querySelectorAll('th').forEach(th => {
-                                    headers.push(th.textContent.trim());
+                                headerRow.querySelectorAll('th, td').forEach(cell => {
+                                    headers.push(cell.textContent.trim());
                                 });
                             }
                             
-                            // Extract data rows
+                            // Extract data rows - improved to handle all table structures
                             const dataRows = [];
-                            const bodyRows = table.querySelectorAll('tbody tr');
+                            let bodyRows = table.querySelectorAll('tbody tr');
+                            
+                            // If no tbody, get all rows except first (header) row
+                            if (bodyRows.length === 0) {
+                                const allRows = table.querySelectorAll('tr');
+                                bodyRows = Array.from(allRows).slice(1); // Skip first row (header)
+                            }
+                            
                             bodyRows.forEach(row => {
                                 const rowData = [];
-                                row.querySelectorAll('td').forEach(td => {
-                                    rowData.push(td.textContent.trim());
+                                row.querySelectorAll('td, th').forEach(cell => {
+                                    // Preserve HTML formatting for better display
+                                    let cellText = cell.textContent.trim();
+                                    
+                                    // Handle special formatting (bold, colors, etc.)
+                                    if (cell.style.fontWeight === 'bold' || cell.querySelector('strong, b')) {
+                                        cellText = '**' + cellText + '**'; // Mark bold text
+                                    }
+                                    
+                                    rowData.push(cellText);
                                 });
                                 if (rowData.length > 0) {
                                     dataRows.push(rowData);
@@ -5645,7 +5828,7 @@ Data is currently saved locally and will sync once Web App is configured.`);
                                 }
                             }
                             
-                            // Configure autoTable with better sizing and page break settings
+                            // Configure autoTable with enhanced styling to match HTML exactly
                             const tableConfig = {
                                 head: headers.length > 0 ? [headers] : [],
                                 body: dataRows,
@@ -5653,31 +5836,33 @@ Data is currently saved locally and will sync once Web App is configured.`);
                                 startY: yPosition,
                                 theme: 'grid',
                                 headStyles: {
-                                    fillColor: [52, 152, 219], // Blue header
+                                    fillColor: [52, 152, 219], // Blue header matching HTML
                                     textColor: [255, 255, 255],
-                                    fontSize: 9,
+                                    fontSize: 11,
                                     fontStyle: 'bold',
                                     halign: 'center',
-                                    cellPadding: 2
+                                    cellPadding: 4
                                 },
                                 bodyStyles: {
-                                    fontSize: 8,
-                                    cellPadding: 2,
+                                    fontSize: 10,
+                                    cellPadding: 3,
                                     overflow: 'linebreak',
-                                    cellWidth: 'wrap'
+                                    cellWidth: 'wrap',
+                                    lineColor: [200, 200, 200],
+                                    lineWidth: 0.5
                                 },
                                 footStyles: {
-                                    fillColor: [44, 62, 80], // Dark footer
+                                    fillColor: [44, 62, 80], // Dark footer matching HTML
                                     textColor: [255, 255, 255],
-                                    fontSize: 9,
+                                    fontSize: 11,
                                     fontStyle: 'bold',
                                     halign: 'center',
-                                    cellPadding: 2
+                                    cellPadding: 4
                                 },
                                 alternateRowStyles: {
-                                    fillColor: [249, 249, 249]
+                                    fillColor: [248, 249, 250] // Light gray alternating rows
                                 },
-                                margin: { left: 10, right: 10 },
+                                margin: { left: 15, right: 15 },
                                 tableWidth: 'auto',
                                 columnStyles: {},
                                 showHead: 'everyPage', // Show header on every page
@@ -5685,13 +5870,51 @@ Data is currently saved locally and will sync once Web App is configured.`);
                                 styles: {
                                     overflow: 'linebreak',
                                     cellWidth: 'wrap',
-                                    fontSize: 8
+                                    fontSize: 10,
+                                    cellPadding: 3,
+                                    lineColor: [200, 200, 200],
+                                    lineWidth: 0.5
+                                },
+                                pageBreak: 'auto', // Better page break handling
+                                pageBreakBefore: function(cursor, doc) {
+                                    return cursor.y + 20 > doc.internal.pageSize.height - 30;
                                 }
                             };
                             
-                            // Right-align the last column (usually weight)
+                            // Enhanced column styling based on content
                             if (headers.length > 0) {
-                                tableConfig.columnStyles[headers.length - 1] = { halign: 'right' };
+                                headers.forEach((header, index) => {
+                                    const headerLower = header.toLowerCase();
+                                    
+                                    // Serial number columns - center aligned, narrow
+                                    if (headerLower.includes('sl') || headerLower.includes('sr') || headerLower.includes('no.')) {
+                                        tableConfig.columnStyles[index] = { 
+                                            halign: 'center', 
+                                            cellWidth: 20,
+                                            fontSize: 9
+                                        };
+                                    }
+                                    // Weight columns - right aligned
+                                    else if (headerLower.includes('weight') || headerLower.includes('wt') || headerLower.includes('kg')) {
+                                        tableConfig.columnStyles[index] = { 
+                                            halign: 'right',
+                                            fontSize: 10
+                                        };
+                                    }
+                                    // Description/remarks columns - left aligned, wider
+                                    else if (headerLower.includes('desc') || headerLower.includes('remarks') || headerLower.includes('type')) {
+                                        tableConfig.columnStyles[index] = { 
+                                            halign: 'left',
+                                            cellWidth: 'auto'
+                                        };
+                                    }
+                                    // Default center alignment for other columns
+                                    else {
+                                        tableConfig.columnStyles[index] = { 
+                                            halign: 'center'
+                                        };
+                                    }
+                                });
                             }
                             
                             // Generate the table
@@ -5699,11 +5922,23 @@ Data is currently saved locally and will sync once Web App is configured.`);
                             yPosition = doc.lastAutoTable.finalY + 8;
                         });
                         
-                        // Add summary sections after all tables - enhanced to capture all summary styles
-                        const summaryDivs = modalContent.querySelectorAll(
+                        // Add summary sections after all tables - enhanced to capture all summary content
+                        let summaryDivs = Array.from(modalContent.querySelectorAll(
                             'div[style*="background-color: #ecf0f1"], div[style*="background-color:#ecf0f1"], ' +
                             'div[style*="background-color: #2c3e50"], div[style*="background-color:#2c3e50"]'
-                        );
+                        ));
+                        
+                        // Also find summary divs by content - improved detection
+                        const allDivs = modalContent.querySelectorAll('div');
+                        allDivs.forEach(div => {
+                            const text = div.textContent || '';
+                            const hasHeading = div.querySelector('h4, h3, h2');
+                            if (hasHeading && (text.includes('Summary') || text.includes('SUMMARY') || text.includes('OVERALL') || text.includes('Total Records') || text.includes('Total Coils') || text.includes('Total Gross Weight'))) {
+                                if (!summaryDivs.includes(div)) {
+                                    summaryDivs.push(div);
+                                }
+                            }
+                        });
                         
                         summaryDivs.forEach(div => {
                             const summaryTitle = div.querySelector('h4');
@@ -5714,8 +5949,8 @@ Data is currently saved locally and will sync once Web App is configured.`);
                                     yPosition = 15;
                                 }
                                 
-                                // Add summary section header with matching HTML style
-                                doc.setFontSize(11);
+                                // Add summary section header with matching HTML style - increased font size
+                                doc.setFontSize(13);
                                 doc.setFont(undefined, 'bold');
                                 
                                 // Use different colors based on summary type
@@ -5738,8 +5973,8 @@ Data is currently saved locally and will sync once Web App is configured.`);
                                 
                                 yPosition += 10;
                                 
-                                // Add summary details - set black color for visibility
-                                doc.setFontSize(9);
+                                // Add summary details - set black color for visibility and increased font size
+                                doc.setFontSize(11);
                                 doc.setFont(undefined, 'normal');
                                 doc.setTextColor(0, 0, 0); // Black text for visibility
                                 
@@ -5748,34 +5983,49 @@ Data is currently saved locally and will sync once Web App is configured.`);
                                 if (flexDiv) {
                                     const summaryItems = flexDiv.querySelectorAll('div');
                                     let xPos = 20;
-                                    const itemWidth = (pageWidth - 40) / summaryItems.length;
+                                    const itemWidth = (pageWidth - 40) / Math.max(summaryItems.length, 1);
                                     
                                     summaryItems.forEach((item, index) => {
                                         const text = item.textContent.trim();
                                         if (text) {
                                             // Set black text color for visibility
                                             doc.setTextColor(0, 0, 0);
-                                            // Split by line breaks and handle multi-line items
+                                            
+                                            // Handle structured data better
                                             const lines = text.split('\n').filter(line => line.trim());
+                                            let maxLines = 0;
+                                            
                                             lines.forEach((line, lineIndex) => {
-                                                doc.text(line.trim(), xPos + (itemWidth * index), yPosition + (lineIndex * 6), { 
-                                                    align: 'left',
-                                                    maxWidth: itemWidth - 10
-                                                });
+                                                const cleanLine = line.trim();
+                                                if (cleanLine) {
+                                                    // Wrap text if too long
+                                                    const wrappedLines = doc.splitTextToSize(cleanLine, itemWidth - 10);
+                                                    wrappedLines.forEach((wrappedLine, wrapIndex) => {
+                                                        doc.text(wrappedLine, xPos + (itemWidth * index), yPosition + ((lineIndex + wrapIndex) * 5), { 
+                                                            align: 'left'
+                                                        });
+                                                    });
+                                                    maxLines = Math.max(maxLines, lineIndex + wrappedLines.length);
+                                                }
                                             });
                                         }
                                     });
-                                    yPosition += Math.max(15, summaryItems.length > 0 ? 20 : 15);
+                                    yPosition += Math.max(20, maxLines * 5 + 10);
                                 } else {
-                                    // Handle regular paragraph summaries
-                                    const summaryParagraphs = div.querySelectorAll('p');
+                                    // Handle regular paragraph summaries and other content
+                                    const summaryParagraphs = div.querySelectorAll('p, div:not([style*="display: flex"])');
                                     summaryParagraphs.forEach(p => {
                                         const text = p.textContent.trim();
-                                        if (text) {
+                                        if (text && !text.includes('📊')) { // Skip emoji-only content
                                             // Set black text color for visibility
                                             doc.setTextColor(0, 0, 0);
-                                            doc.text(text, 20, yPosition);
-                                            yPosition += 7;
+                                            
+                                            // Wrap long text properly
+                                            const wrappedLines = doc.splitTextToSize(text, pageWidth - 40);
+                                            wrappedLines.forEach((line, lineIndex) => {
+                                                doc.text(line, 20, yPosition + (lineIndex * 6));
+                                            });
+                                            yPosition += (wrappedLines.length * 6) + 3;
                                         }
                                     });
                                 }
