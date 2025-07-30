@@ -6047,27 +6047,21 @@ Data is currently saved locally and will sync once Web App is configured.`);
                         const link = document.createElement('a');
                         link.href = url;
                         link.download = filename;
+                        link.type = 'application/pdf'; // Ensure proper MIME type
                         link.style.display = 'none';
                         document.body.appendChild(link);
                         
-                        // Try to open in new tab first, fallback to download
+                        // Direct download to open in mobile device's default PDF app
                         try {
-                            // Attempt to open in browser
-                            const newTab = window.open(url, '_blank');
-                            if (newTab) {
-                                console.log('PDF opened in new tab on mobile');
-                                showMessage('PDF opened in new tab', 'success');
-                            } else {
-                                // Fallback to download
-                                link.click();
-                                console.log('PDF downloaded on mobile (popup blocked)');
-                                showMessage('PDF downloaded to device', 'success');
-                            }
-                        } catch (mobileError) {
-                            // Ultimate fallback: force download
+                            // Force immediate download - this will save to device Downloads folder
+                            // and allow user to open with their preferred PDF app
                             link.click();
-                            console.log('PDF downloaded on mobile (browser limitation)');
-                            showMessage('PDF downloaded to your device', 'success');
+                            console.log('PDF downloaded on mobile for default app');
+                            showMessage('PDF saved to Downloads. Tap to open with your PDF app', 'success');
+                            
+                        } catch (mobileError) {
+                            console.error('Mobile PDF download error:', mobileError);
+                            showMessage('Error downloading PDF: ' + mobileError.message, 'error');
                         }
                         
                         // Clean up
