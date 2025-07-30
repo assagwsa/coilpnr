@@ -6051,17 +6051,52 @@ Data is currently saved locally and will sync once Web App is configured.`);
                         link.style.display = 'none';
                         document.body.appendChild(link);
                         
-                        // Direct download to open in mobile device's default PDF app
+                        // Open PDF in mobile's default PDF viewer for preview
                         try {
-                            // Force immediate download - this will save to device Downloads folder
-                            // and allow user to open with their preferred PDF app
-                            link.click();
-                            console.log('PDF downloaded on mobile for default app');
-                            showMessage('PDF saved to Downloads. Tap to open with your PDF app', 'success');
+                            // First try to open in mobile's built-in PDF viewer
+                            const newWindow = window.open(url, '_blank');
+                            if (newWindow) {
+                                console.log('PDF opened in mobile default PDF viewer');
+                                showMessage('PDF opened in PDF viewer. You can save from there if needed', 'success');
+                            } else {
+                                // Fallback: try using intent URL for Android or direct link
+                                if (navigator.userAgent.includes('Android')) {
+                                    // Try Android intent to open with default PDF viewer
+                                    const intentUrl = `intent:${url}#Intent;scheme=https;type=application/pdf;category=android.intent.category.BROWSABLE;end`;
+                                    window.location.href = intentUrl;
+                                    console.log('PDF opened via Android intent');
+                                    showMessage('PDF opened in default PDF viewer', 'success');
+                                } else if (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad')) {
+                                    // For iOS, try opening with Safari's built-in PDF viewer
+                                    try {
+                                        window.location.href = url;
+                                        console.log('PDF opened in iOS Safari PDF viewer');
+                                        showMessage('PDF opened in Safari PDF viewer', 'success');
+                                    } catch (iosError) {
+                                        // iOS fallback to download
+                                        link.click();
+                                        console.log('PDF downloaded as iOS fallback');
+                                        showMessage('PDF downloaded. Tap to open with PDF viewer', 'success');
+                                    }
+                                } else {
+                                    // For other mobile platforms, fallback to download
+                                    link.click();
+                                    console.log('PDF downloaded as fallback on mobile');
+                                    showMessage('PDF downloaded. Tap to open with PDF viewer', 'success');
+                                }
+                            }
                             
                         } catch (mobileError) {
-                            console.error('Mobile PDF download error:', mobileError);
-                            showMessage('Error downloading PDF: ' + mobileError.message, 'error');
+                            // Final fallback: force download
+                            console.error('Mobile PDF preview error:', mobileError);
+                            try {
+                                link.click();
+                                console.log('PDF downloaded as final fallback');
+                                showMessage('PDF downloaded. Tap to open with PDF viewer', 'success');
+                            } catch (downloadError) {
+                                console.error('PDF download fallback failed:', downloadError);
+                                showMessage('Error opening PDF: ' + downloadError.message, 'error');
+                            }
                         }
                         
                         // Clean up
