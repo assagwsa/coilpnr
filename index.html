@@ -6069,7 +6069,27 @@ Data is currently saved locally and will sync once Web App is configured.`);
                         try {
                             link.click();
                             console.log('PDF downloaded to mobile device:', filename);
-                            showMessage('PDF saved to Downloads folder: ' + filename, 'success');
+                            
+                            // Show immediate feedback with better message
+                            showMessage('✓ PDF downloaded successfully!', 'success');
+                            
+                            // Temporarily disable button to prevent repeated clicks
+                            if (downloadBtn) {
+                                downloadBtn.disabled = true;
+                                downloadBtn.textContent = 'Downloaded ✓';
+                                downloadBtn.style.background = '#27ae60';
+                            }
+                            
+                            // Show additional notification and re-enable button
+                            setTimeout(() => {
+                                showMessage('File saved to Downloads folder', 'info');
+                                if (downloadBtn) {
+                                    downloadBtn.disabled = false;
+                                    downloadBtn.textContent = 'Download';
+                                    downloadBtn.style.background = '#27ae60';
+                                }
+                            }, 3000);
+                            
                         } catch (mobileError) {
                             console.error('Mobile download failed:', mobileError);
                             showMessage('Download failed. Please try again.', 'error');
@@ -6141,7 +6161,12 @@ Data is currently saved locally and will sync once Web App is configured.`);
                             link.click();
                             document.body.removeChild(link);
                             console.log('PDF downloaded (popup was blocked)');
-                            showMessage('PDF downloaded to computer', 'success');
+                            showMessage('✓ PDF downloaded successfully!', 'success');
+                            
+                            // Show additional notification
+                            setTimeout(() => {
+                                showMessage('File saved to Downloads folder', 'info');
+                            }, 1500);
                         }
                     }
                     
