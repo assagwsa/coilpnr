@@ -692,12 +692,68 @@
             .container {
                 padding: 10px;
             }
+            
+            /* Ensure PDF button remains visible on very small screens */
+            .report-modal-share, .report-modal-print, .report-modal-pdf, .report-modal-close {
+                font-size: 11px !important;
+                padding: 5px 8px !important;
+                min-width: 50px !important;
+            }
+            
+            .report-modal-pdf {
+                display: inline-block !important;
+                visibility: visible !important;
+                background: #f39c12 !important;
+                color: white !important;
+            }
         }
 
         /* Prevent zoom on iOS */
         @media screen and (-webkit-min-device-pixel-ratio: 0) {
             input, textarea, select {
                 font-size: 16px !important;
+            }
+        }
+
+        /* Additional mobile viewport fixes for PDF button visibility */
+        @media screen and (max-width: 768px) {
+            .report-modal {
+                padding: 10px !important;
+            }
+            
+            .report-modal-header {
+                min-height: 60px !important;
+                flex-wrap: wrap !important;
+            }
+            
+            .report-modal-buttons {
+                width: 100% !important;
+                display: flex !important;
+                flex-wrap: wrap !important;
+                justify-content: center !important;
+                gap: 8px !important;
+                margin-top: 10px !important;
+            }
+            
+            .report-modal-pdf {
+                display: inline-block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                order: 1 !important; /* Ensure PDF button appears early in flex order */
+            }
+        }
+
+        /* Landscape mobile orientation fixes */
+        @media screen and (max-height: 500px) and (orientation: landscape) {
+            .report-modal-buttons {
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                justify-content: space-around !important;
+            }
+            
+            .report-modal-pdf {
+                display: inline-block !important;
+                min-width: 60px !important;
             }
         }
 
@@ -812,6 +868,11 @@
         .report-modal-buttons {
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            min-height: 44px; /* Ensure touch target size for mobile */
         }
 
         .report-modal-share, .report-modal-print, .report-modal-pdf, .report-modal-close {
@@ -846,12 +907,26 @@
         }
 
         .report-modal-pdf {
-            background: #f39c12;
-            color: white;
+            background: #f39c12 !important;
+            color: white !important;
+            display: inline-block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            min-height: 44px !important; /* Ensure touch target size */
+            box-sizing: border-box !important;
         }
 
         .report-modal-pdf:active {
-            background: #e67e22;
+            background: #e67e22 !important;
+        }
+
+        .report-modal-pdf:hover {
+            background: #e67e22 !important;
+        }
+
+        .report-modal-pdf.pdf-generating {
+            background: #95a5a6 !important;
+            opacity: 0.7 !important;
         }
 
         .report-modal-close {
@@ -1084,11 +1159,26 @@
             .report-modal-buttons {
                 flex-wrap: wrap;
                 gap: 8px;
+                justify-content: center;
             }
             
             .report-modal-share, .report-modal-print, .report-modal-pdf, .report-modal-close {
                 font-size: 12px;
                 padding: 6px 10px;
+                flex: 0 0 auto;
+                min-width: 60px;
+                display: inline-block !important;
+                visibility: visible !important;
+            }
+            
+            /* Ensure PDF button is always visible on mobile */
+            .report-modal-pdf {
+                background: #f39c12 !important;
+                color: white !important;
+                border: none !important;
+                display: inline-block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
             }
         }
     </style>
