@@ -692,68 +692,12 @@
             .container {
                 padding: 10px;
             }
-            
-            /* Ensure PDF button remains visible on very small screens */
-            .report-modal-share, .report-modal-print, .report-modal-pdf, .report-modal-close {
-                font-size: 11px !important;
-                padding: 5px 8px !important;
-                min-width: 50px !important;
-            }
-            
-            .report-modal-pdf {
-                display: inline-block !important;
-                visibility: visible !important;
-                background: #f39c12 !important;
-                color: white !important;
-            }
         }
 
         /* Prevent zoom on iOS */
         @media screen and (-webkit-min-device-pixel-ratio: 0) {
             input, textarea, select {
                 font-size: 16px !important;
-            }
-        }
-
-        /* Additional mobile viewport fixes for PDF button visibility */
-        @media screen and (max-width: 768px) {
-            .report-modal {
-                padding: 10px !important;
-            }
-            
-            .report-modal-header {
-                min-height: 60px !important;
-                flex-wrap: wrap !important;
-            }
-            
-            .report-modal-buttons {
-                width: 100% !important;
-                display: flex !important;
-                flex-wrap: wrap !important;
-                justify-content: center !important;
-                gap: 8px !important;
-                margin-top: 10px !important;
-            }
-            
-            .report-modal-pdf {
-                display: inline-block !important;
-                visibility: visible !important;
-                opacity: 1 !important;
-                order: 1 !important; /* Ensure PDF button appears early in flex order */
-            }
-        }
-
-        /* Landscape mobile orientation fixes */
-        @media screen and (max-height: 500px) and (orientation: landscape) {
-            .report-modal-buttons {
-                flex-direction: row !important;
-                flex-wrap: wrap !important;
-                justify-content: space-around !important;
-            }
-            
-            .report-modal-pdf {
-                display: inline-block !important;
-                min-width: 60px !important;
             }
         }
 
@@ -836,19 +780,18 @@
 
         /* APK Report Modal - Added for APK compatibility */
         .report-modal {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            background: rgba(0, 0, 0, 0.9) !important;
-            z-index: 99999 !important;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
             display: none;
-            flex-direction: column !important;
+            flex-direction: column;
             visibility: hidden;
             opacity: 0;
             transition: opacity 0.3s ease;
-            overflow-y: auto !important;
         }
         
         .report-modal.show {
@@ -858,28 +801,20 @@
         }
 
         .report-modal-header {
-            background: #2c3e50 !important;
-            color: white !important;
-            padding: 15px !important;
-            display: flex !important;
-            justify-content: space-between !important;
-            align-items: center !important;
-            width: 100% !important;
-            box-sizing: border-box !important;
-            min-height: 60px !important;
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .report-modal-buttons {
             display: flex;
             gap: 10px;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-            min-height: 44px; /* Ensure touch target size for mobile */
         }
 
-        .report-modal-share, .report-modal-print, .report-modal-pdf, .report-modal-close {
+        .report-modal-share, .report-modal-print, .report-modal-pdf, .report-modal-download, .report-modal-close {
             border: none;
             padding: 8px 12px;
             border-radius: 4px;
@@ -911,26 +846,21 @@
         }
 
         .report-modal-pdf {
-            background: #f39c12 !important;
-            color: white !important;
-            display: inline-block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            min-height: 44px !important; /* Ensure touch target size */
-            box-sizing: border-box !important;
+            background: #f39c12;
+            color: white;
         }
 
         .report-modal-pdf:active {
-            background: #e67e22 !important;
+            background: #e67e22;
         }
 
-        .report-modal-pdf:hover {
-            background: #e67e22 !important;
+        .report-modal-download {
+            background: #27ae60;
+            color: white;
         }
 
-        .report-modal-pdf.pdf-generating {
-            background: #95a5a6 !important;
-            opacity: 0.7 !important;
+        .report-modal-download:active {
+            background: #219a52;
         }
 
         .report-modal-close {
@@ -1163,26 +1093,11 @@
             .report-modal-buttons {
                 flex-wrap: wrap;
                 gap: 8px;
-                justify-content: center;
             }
             
-            .report-modal-share, .report-modal-print, .report-modal-pdf, .report-modal-close {
+            .report-modal-share, .report-modal-print, .report-modal-pdf, .report-modal-download, .report-modal-close {
                 font-size: 12px;
                 padding: 6px 10px;
-                flex: 0 0 auto;
-                min-width: 60px;
-                display: inline-block !important;
-                visibility: visible !important;
-            }
-            
-            /* Ensure PDF button is always visible on mobile */
-            .report-modal-pdf {
-                background: #f39c12 !important;
-                color: white !important;
-                border: none !important;
-                display: inline-block !important;
-                visibility: visible !important;
-                opacity: 1 !important;
             }
         }
     </style>
@@ -1290,7 +1205,8 @@
             <div class="report-modal-buttons">
                 <button class="report-modal-share" onclick="shareReport()">Share</button>
                 <button class="report-modal-print" onclick="printReport()">Print</button>
-                <button class="report-modal-pdf" onclick="downloadReportAsPDF()" style="background: #f39c12 !important; color: white !important; display: inline-block !important; visibility: visible !important; opacity: 1 !important; min-width: 60px !important; padding: 8px 12px !important; border: none !important; border-radius: 4px !important; cursor: pointer !important; font-size: 14px !important;">PDF</button>
+                <button class="report-modal-pdf" onclick="viewReportAsPDF()">View</button>
+                <button class="report-modal-download" onclick="downloadReportAsPDF()">Download</button>
                 <button class="report-modal-close" onclick="closeReportModal()">Close</button>
             </div>
         </div>
@@ -5412,36 +5328,6 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 // Force browser to recalculate layout
                 modal.offsetHeight;
                 
-                // Ensure PDF button is visible on mobile with aggressive styling
-                const pdfButton = document.querySelector('.report-modal-pdf');
-                if (pdfButton) {
-                    // Apply all styles via JavaScript to override any CSS conflicts
-                    pdfButton.style.setProperty('display', 'inline-block', 'important');
-                    pdfButton.style.setProperty('visibility', 'visible', 'important');
-                    pdfButton.style.setProperty('opacity', '1', 'important');
-                    pdfButton.style.setProperty('background', '#f39c12', 'important');
-                    pdfButton.style.setProperty('color', 'white', 'important');
-                    pdfButton.style.setProperty('border', 'none', 'important');
-                    pdfButton.style.setProperty('padding', '8px 12px', 'important');
-                    pdfButton.style.setProperty('border-radius', '4px', 'important');
-                    pdfButton.style.setProperty('cursor', 'pointer', 'important');
-                    pdfButton.style.setProperty('font-size', '14px', 'important');
-                    pdfButton.style.setProperty('min-width', '60px', 'important');
-                    pdfButton.style.setProperty('z-index', '999999', 'important');
-                    console.log('PDF button visibility ensured for mobile with aggressive styling');
-                } else {
-                    console.error('PDF button not found in modal');
-                }
-                
-                // Also ensure all buttons are visible
-                const allButtons = document.querySelectorAll('.report-modal-buttons button');
-                allButtons.forEach((btn, index) => {
-                    btn.style.setProperty('display', 'inline-block', 'important');
-                    btn.style.setProperty('visibility', 'visible', 'important');
-                    btn.style.setProperty('opacity', '1', 'important');
-                    console.log(`Button ${index} visibility ensured:`, btn.textContent);
-                });
-                
                 console.log('Modal shown with content length:', content.length);
                 console.log('Modal content element:', modalContent);
                 console.log('Modal display style:', modal.style.display);
@@ -5468,192 +5354,147 @@ Data is currently saved locally and will sync once Web App is configured.`);
             }
         }
 
-        // Function to show built-in PDF viewer for mobile
-        function showBuiltInPDFViewer(pdfUrl, filename) {
-            // Create modal overlay for PDF viewer
-            const pdfModal = document.createElement('div');
-            pdfModal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.9);
-                z-index: 10000;
-                display: flex;
-                flex-direction: column;
-            `;
-            
-            // Create header with controls
-            const header = document.createElement('div');
-            header.style.cssText = `
-                background: #2c3e50 !important;
-                color: white !important;
-                padding: 15px !important;
-                display: flex !important;
-                justify-content: space-between !important;
-                align-items: center !important;
-                font-family: Arial, sans-serif !important;
-                font-size: 16px !important;
-                min-height: 50px !important;
-                box-sizing: border-box !important;
-                flex-shrink: 0 !important;
-                width: 100% !important;
-                position: relative !important;
-                z-index: 10001 !important;
-            `;
-            
-            const titleSpan = document.createElement('span');
-            titleSpan.textContent = 'PDF Viewer';
-            titleSpan.style.cssText = `
-                font-weight: bold !important;
-                color: white !important;
-                font-size: 18px !important;
-                flex-grow: 1 !important;
-            `;
-            
-            const controlsDiv = document.createElement('div');
-            controlsDiv.style.cssText = `
-                display: flex !important;
-                gap: 12px !important;
-                align-items: center !important;
-                flex-shrink: 0 !important;
-            `;
-            
-            // Download button
-            const downloadBtn = document.createElement('button');
-            downloadBtn.textContent = '💾 Save';
-            downloadBtn.style.cssText = `
-                background: #27ae60 !important;
-                color: white !important;
-                border: none !important;
-                padding: 12px 16px !important;
-                border-radius: 6px !important;
-                font-size: 16px !important;
-                cursor: pointer !important;
-                font-weight: bold !important;
-                min-width: 80px !important;
-                text-align: center !important;
-                box-sizing: border-box !important;
-            `;
-            downloadBtn.onclick = function() {
-                const link = document.createElement('a');
-                link.href = pdfUrl;
-                link.download = filename;
-                link.click();
-                showMessage('PDF saved to Downloads', 'success');
-            };
-            
-            // Close button
-            const closeBtn = document.createElement('button');
-            closeBtn.textContent = '✕ Close';
-            closeBtn.style.cssText = `
-                background: #e74c3c !important;
-                color: white !important;
-                border: none !important;
-                padding: 12px 16px !important;
-                border-radius: 6px !important;
-                font-size: 16px !important;
-                cursor: pointer !important;
-                font-weight: bold !important;
-                min-width: 80px !important;
-                text-align: center !important;
-                box-sizing: border-box !important;
-            `;
-            closeBtn.onclick = function() {
-                document.body.removeChild(pdfModal);
-                URL.revokeObjectURL(pdfUrl);
-            };
-            
-            controlsDiv.appendChild(downloadBtn);
-            controlsDiv.appendChild(closeBtn);
-            header.appendChild(titleSpan);
-            header.appendChild(controlsDiv);
-            
-            // Create PDF iframe
-            const pdfFrame = document.createElement('iframe');
-            pdfFrame.src = pdfUrl;
-            pdfFrame.style.cssText = `
-                width: 100% !important;
-                height: calc(100vh - 80px) !important;
-                border: none !important;
-                background: white !important;
-                flex-grow: 1 !important;
-                overflow: auto !important;
-            `;
-            
-            // Handle iframe loading
-            pdfFrame.onload = function() {
-                console.log('PDF loaded in built-in viewer');
-                showMessage('PDF loaded. Use Save button to download', 'info');
-            };
-            
-            pdfFrame.onerror = function() {
-                console.error('Failed to load PDF in iframe');
-                pdfFrame.style.display = 'none';
+        // View PDF function - opens PDF for viewing only
+        function viewReportAsPDF() {
+            try {
+                const title = document.getElementById('reportModalTitle').textContent;
+                const modalContent = document.getElementById('reportModalContent');
                 
-                // Create fallback content
-                const fallbackDiv = document.createElement('div');
-                fallbackDiv.style.cssText = `
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    align-items: center;
-                    height: 100%;
-                    color: white;
-                    font-family: Arial, sans-serif;
-                    text-align: center;
-                    padding: 20px;
-                `;
-                
-                fallbackDiv.innerHTML = `
-                    <h3>PDF Preview Not Available</h3>
-                    <p>Your browser doesn't support PDF preview.<br>Click Save to download the PDF file.</p>
-                    <button onclick="this.parentElement.parentElement.querySelector('button').click()" 
-                            style="background: #27ae60; color: white; border: none; padding: 12px 24px; 
-                                   border-radius: 4px; font-size: 16px; cursor: pointer; margin-top: 15px;">
-                        💾 Download PDF
-                    </button>
-                `;
-                
-                pdfModal.appendChild(fallbackDiv);
-            };
-            
-            // Assemble modal (ensure header appears first)
-            pdfModal.appendChild(header);
-            pdfModal.appendChild(pdfFrame);
-            
-            // Add to page
-            document.body.appendChild(pdfModal);
-            
-            // Debug: Log header creation
-            console.log('PDF modal created with header:', header.innerHTML);
-            console.log('Header style:', header.style.cssText);
-            
-            // Handle escape key
-            const handleEscape = function(e) {
-                if (e.key === 'Escape') {
-                    closeBtn.click();
-                    document.removeEventListener('keydown', handleEscape);
+                // Show user feedback immediately
+                const viewBtn = document.querySelector('.report-modal-pdf');
+                if (viewBtn) {
+                    viewBtn.textContent = 'Opening...';
+                    viewBtn.disabled = true;
                 }
-            };
-            document.addEventListener('keydown', handleEscape);
-            
-            return pdfModal;
+                
+                // Check if jsPDF is available
+                let jsPDF;
+                if (window.jspdf && window.jspdf.jsPDF) {
+                    jsPDF = window.jspdf.jsPDF;
+                } else if (window.jsPDF) {
+                    jsPDF = window.jsPDF;
+                } else {
+                    throw new Error('PDF library not loaded. Please refresh and try again.');
+                }
+                
+                console.log('jsPDF loaded successfully for viewing:', typeof jsPDF);
+                const isDetailReport = title.includes('Detail') || title.includes('ALL OUT');
+                const doc = new jsPDF('p', 'mm', 'a4');
+                
+                // Generate PDF content (same as download function)
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const centerX = pageWidth / 2;
+                
+                // Add header
+                doc.setFontSize(12);
+                doc.setFont(undefined, 'bold');
+                doc.text('A.S.Shipping Agencies Pvt Ltd', centerX, 15, { align: 'center' });
+                doc.text('(Greenways Group)', centerX, 22, { align: 'center' });
+                
+                // Add title
+                doc.setFontSize(11);
+                doc.setFont(undefined, 'bold');
+                doc.text(title, centerX, 32, { align: 'center' });
+                
+                // Add generation date
+                doc.setFontSize(9);
+                doc.setFont(undefined, 'normal');
+                const currentDate = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+                const currentTime = new Date().toLocaleTimeString('en-US', { hour12: true });
+                doc.text(`Generated on: ${currentDate} ${currentTime}`, centerX, 38, { align: 'center' });
+                
+                let yPosition = 45;
+                
+                // Generate PDF content (simplified version for viewing)
+                if (modalContent.innerHTML.includes('<table')) {
+                    if (doc.autoTable) {
+                        const tables = modalContent.querySelectorAll('table');
+                        tables.forEach((table, tableIndex) => {
+                            if (tableIndex > 0) yPosition += 10;
+                            
+                            const rows = Array.from(table.querySelectorAll('tr'));
+                            const tableData = rows.map(row => {
+                                return Array.from(row.querySelectorAll('th, td')).map(cell => 
+                                    cell.textContent.trim()
+                                );
+                            });
+                            
+                            if (tableData.length > 0) {
+                                doc.autoTable({
+                                    head: [tableData[0]],
+                                    body: tableData.slice(1),
+                                    startY: yPosition,
+                                    styles: { fontSize: 8, cellPadding: 2 },
+                                    headStyles: { fillColor: [44, 62, 80], textColor: 255, fontSize: 9 },
+                                    alternateRowStyles: { fillColor: [240, 240, 240] },
+                                    margin: { left: 10, right: 10 }
+                                });
+                                yPosition = doc.lastAutoTable.finalY + 10;
+                            }
+                        });
+                    }
+                } else {
+                    // Handle plain text content
+                    doc.setFontSize(8);
+                    doc.setFont(undefined, 'normal');
+                    const textContent = modalContent.textContent || modalContent.innerText;
+                    const lines = textContent.split('\n').filter(line => line.trim());
+                    
+                    lines.forEach(line => {
+                        if (yPosition > doc.internal.pageSize.height - 30) {
+                            doc.addPage();
+                            yPosition = 20;
+                        }
+                        const wrappedLines = doc.splitTextToSize(line.trim(), pageWidth - 40);
+                        doc.text(wrappedLines, 20, yPosition);
+                        yPosition += (wrappedLines.length * 6) + 2;
+                    });
+                }
+                
+                // Create blob and open for viewing only (no download)
+                const pdfBlob = doc.output('blob');
+                const url = URL.createObjectURL(pdfBlob);
+                const filename = `CoilReport_View_${Date.now()}.pdf`;
+                
+                // Open PDF in new tab/window for viewing
+                const newWindow = window.open(url, '_blank');
+                if (newWindow) {
+                    console.log('PDF opened for viewing');
+                    showMessage('PDF opened for viewing', 'success');
+                } else {
+                    showMessage('Please allow popups to view PDF', 'warning');
+                }
+                
+                // Clean up URL after delay
+                setTimeout(() => {
+                    URL.revokeObjectURL(url);
+                }, 10000);
+                
+            } catch (error) {
+                console.error('Error viewing PDF:', error);
+                showMessage('Error opening PDF: ' + error.message, 'error');
+            } finally {
+                // Reset button state
+                const viewBtn = document.querySelector('.report-modal-pdf');
+                if (viewBtn) {
+                    viewBtn.textContent = 'View';
+                    viewBtn.disabled = false;
+                }
+            }
         }
 
-        // Enhanced PDF viewer function for mobile/APK compatibility
+        // Enhanced PDF download function for mobile/APK compatibility with proper local storage
         function downloadReportAsPDF() {
             try {
                 const title = document.getElementById('reportModalTitle').textContent;
                 const modalContent = document.getElementById('reportModalContent');
                 
                 // Show user feedback immediately
-                const pdfBtn = document.querySelector('.report-modal-pdf');
-                if (pdfBtn) {
-                    pdfBtn.textContent = 'Generating...';
-                    pdfBtn.disabled = true;
-                    pdfBtn.classList.add('pdf-generating');
+                const downloadBtn = document.querySelector('.report-modal-download');
+                if (downloadBtn) {
+                    downloadBtn.textContent = 'Downloading...';
+                    downloadBtn.disabled = true;
+                    downloadBtn.classList.add('pdf-generating');
                 }
                 
                 // Check if jsPDF is available with multiple fallback methods
@@ -6217,17 +6058,22 @@ Data is currently saved locally and will sync once Web App is configured.`);
                     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                     
                     if (isMobile) {
-                        // Mobile-specific handling: Use direct download approach
+                        // Mobile-specific handling: Direct download to device storage with proper filename
                         const link = document.createElement('a');
                         link.href = url;
                         link.download = filename;
-                        link.type = 'application/pdf'; // Ensure proper MIME type
                         link.style.display = 'none';
                         document.body.appendChild(link);
                         
-                        // Create built-in PDF viewer for mobile
-                        showBuiltInPDFViewer(url, filename);
-                        console.log('PDF opened in built-in mobile viewer');
+                        // Force download to mobile local storage
+                        try {
+                            link.click();
+                            console.log('PDF downloaded to mobile device:', filename);
+                            showMessage('PDF saved to Downloads folder: ' + filename, 'success');
+                        } catch (mobileError) {
+                            console.error('Mobile download failed:', mobileError);
+                            showMessage('Download failed. Please try again.', 'error');
+                        }
                         
                         // Clean up
                         setTimeout(() => {
@@ -6326,11 +6172,11 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 
             } finally {
                 // Reset button state
-                const pdfBtn = document.querySelector('.report-modal-pdf');
-                if (pdfBtn) {
-                    pdfBtn.textContent = 'PDF';
-                    pdfBtn.disabled = false;
-                    pdfBtn.classList.remove('pdf-generating');
+                const downloadBtn = document.querySelector('.report-modal-download');
+                if (downloadBtn) {
+                    downloadBtn.textContent = 'Download';
+                    downloadBtn.disabled = false;
+                    downloadBtn.classList.remove('pdf-generating');
                 }
             }
         }
