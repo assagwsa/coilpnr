@@ -3273,23 +3273,24 @@ Data is currently saved locally and will sync once Web App is configured.`);
             }, 300);
         }
 
-        // Close modal when clicking outside of it
-        document.addEventListener('click', function(event) {
-            const modal = document.getElementById('coilModal');
-            if (event.target === modal) {
-                closeCoilModal();
-            }
-        });
+
 
         // Close modal with Escape key
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 const modal = document.getElementById('coilModal');
-                if (modal.classList.contains('show')) {
+                if (modal && modal.classList.contains('show')) {
                     closeCoilModal();
+                }
+                
+                const reportModal = document.getElementById('reportModal');
+                if (reportModal && reportModal.classList.contains('show')) {
+                    closeReportModal();
                 }
             }
         });
+
+
 
         function showSuggestions() {
             const input = document.getElementById('coilInput').value.trim().toUpperCase();
@@ -3533,7 +3534,9 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 }
                 
                 if (filteredSerials.length > 0) {
-                    suggestions.innerHTML = filteredSerials.map(serial => 
+                    // Add empty option first, then the filtered serials
+                    const allOptions = ['', ...filteredSerials];
+                    suggestions.innerHTML = allOptions.map(serial => 
                         `<div onclick="selectCoilSerialSuggestion('${serial}')">${serial}</div>`
                     ).join('');
                     suggestions.style.display = 'block';
@@ -4979,7 +4982,7 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 let content = `<div style="font-family: Arial, sans-serif; padding: 10px;">
                     <h3 style="text-align: center; margin-bottom: 5px;">A.S.Shipping Agencies Pvt Ltd,</h3>
                     <h4 style="text-align: center; margin-top: 0;">(Greenways Group)</h4>
-                    <h3 style="text-align: center; color: #2c3e50;">GOODS CONSIGNMENT NOTE NO. ${maxSerial} - ${vehicleNumber}${coilSerial ? ` (Serial: ${coilSerial})` : ''}</h3>
+                    <h3 style="text-align: center; color: #2c3e50;">${coilSerial ? `GOODS CONSIGNMENT NOTE NO. ${maxSerial} - ${vehicleNumber}` : `Vehicle Report - ${vehicleNumber}`}</h3>
                     <p style="text-align: center; margin: 5px 0;">Generated on: ${currentDate} ${currentTime}</p>`;
                 
                 // Create sections for each vessel within this vehicle
@@ -5049,7 +5052,8 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 </div>`;
                 
                 // Always show in modal for better display
-                showReportInModal(`GOODS CONSIGNMENT NOTE NO. ${maxSerial} - ${vehicleNumber}`, content);
+                const modalTitle = coilSerial ? `GOODS CONSIGNMENT NOTE NO. ${maxSerial} - ${vehicleNumber}` : `Vehicle Report - ${vehicleNumber}`;
+                showReportInModal(modalTitle, content);
                 
                 showMessage('Vehicle report generated successfully', 'success');
                 
@@ -5512,61 +5516,69 @@ Data is currently saved locally and will sync once Web App is configured.`);
                             }
                         });
                         
-                        // Add summary sections to view PDF as well
+                        // Add summary sections to view PDF as well - detect both light and dark backgrounds
                         let summaryDivs = Array.from(modalContent.querySelectorAll(
                             'div[style*="background-color: #ecf0f1"], div[style*="background-color:#ecf0f1"], ' +
                             'div[style*="background-color: #2c3e50"], div[style*="background-color:#2c3e50"]'
                         ));
                         
-                        // Find summary divs by content for view function
+                        // Find summary divs by content for view function - improved OVERALL detection
                         const allDivs = modalContent.querySelectorAll('div');
                         allDivs.forEach(div => {
                             const text = div.textContent || '';
                             const hasHeading = div.querySelector('h4, h3, h2');
-                            if (hasHeading && (text.includes('Summary') || text.includes('SUMMARY') || text.includes('OVERALL') || text.includes('Total Records') || text.includes('Total Coils') || text.includes('Total Gross Weight'))) {
+                            // Check for specific OVERALL SUMMARY pattern and other summary indicators
+                            if (hasHeading && (text.includes('Summary') || text.includes('SUMMARY') || 
+                                text.includes('OVERALL SUMMARY') || text.includes('📊 OVERALL') || 
+                                text.includes('Total Records') || text.includes('Total Coils') || 
+                                text.includes('Total Gross Weight') || text.includes('Total Vessels'))) {
                                 if (!summaryDivs.includes(div)) {
                                     summaryDivs.push(div);
                                 }
                             }
                         });
                         
-                        // Process summary sections for view PDF
+                        // Process summary sections for view PDF with better formatting
                         summaryDivs.forEach(div => {
                             const summaryTitle = div.querySelector('h4');
-                            if (summaryTitle && (summaryTitle.textContent.includes('Summary') || summaryTitle.textContent.includes('SUMMARY') || summaryTitle.textContent.includes('OVERALL'))) {
+                            if (summaryTitle && (summaryTitle.textContent.includes('Summary') || summaryTitle.textContent.includes('SUMMARY') || summaryTitle.textContent.includes('OVERALL') || summaryTitle.textContent.includes('📊 OVERALL'))) {
                                 // Check if we need a new page
-                                if (yPosition > doc.internal.pageSize.height - 40) {
+                                if (yPosition > doc.internal.pageSize.height - 60) {
                                     doc.addPage();
                                     yPosition = 15;
                                 }
                                 
-                                // Add summary title with increased font size
+                                // Count summary paragraphs to determine box height
+                                const summaryParagraphs = div.querySelectorAll('p');
+                                const summaryHeight = 15 + (summaryParagraphs.length * 6); // Dynamic height based on content
+                                
+                                // Add light gray background box like HTML
+                                doc.setFillColor(236, 240, 241); // #ecf0f1 color
+                                doc.roundedRect(20, yPosition - 5, pageWidth - 40, summaryHeight, 3, 3, 'F');
+                                
+                                // Add summary title with dark color
                                 doc.setFontSize(13);
                                 doc.setFont(undefined, 'bold');
-                                doc.setTextColor(44, 62, 80);
+                                doc.setTextColor(44, 62, 80); // #2c3e50 color
                                 const cleanTitle = summaryTitle.textContent.replace('📊', '').trim();
-                                doc.text(cleanTitle, 20, yPosition);
-                                yPosition += 8;
+                                doc.text(cleanTitle, 25, yPosition + 5);
+                                yPosition += 12;
                                 
-                                // Add summary content with increased font size
+                                // Add summary content with black text
                                 doc.setFontSize(11);
                                 doc.setFont(undefined, 'normal');
                                 doc.setTextColor(0, 0, 0);
                                 
-                                // Handle summary paragraphs
-                                const summaryParagraphs = div.querySelectorAll('p, div:not([style*="display: flex"])');
+                                // Handle summary paragraphs with proper spacing
                                 summaryParagraphs.forEach(p => {
                                     const text = p.textContent.trim();
                                     if (text && !text.includes('📊')) {
-                                        const wrappedLines = doc.splitTextToSize(text, pageWidth - 40);
-                                        wrappedLines.forEach((line, lineIndex) => {
-                                            doc.text(line, 20, yPosition + (lineIndex * 7));
-                                        });
-                                        yPosition += (wrappedLines.length * 7) + 3;
+                                        doc.text(text, 25, yPosition);
+                                        yPosition += 6;
                                     }
                                 });
                                 
-                                yPosition += 8; // Extra gap after summary
+                                yPosition += 10; // Extra gap after summary box
                             }
                         });
                     }
@@ -5928,12 +5940,16 @@ Data is currently saved locally and will sync once Web App is configured.`);
                             'div[style*="background-color: #2c3e50"], div[style*="background-color:#2c3e50"]'
                         ));
                         
-                        // Also find summary divs by content - improved detection
+                        // Also find summary divs by content - improved OVERALL detection
                         const allDivs = modalContent.querySelectorAll('div');
                         allDivs.forEach(div => {
                             const text = div.textContent || '';
                             const hasHeading = div.querySelector('h4, h3, h2');
-                            if (hasHeading && (text.includes('Summary') || text.includes('SUMMARY') || text.includes('OVERALL') || text.includes('Total Records') || text.includes('Total Coils') || text.includes('Total Gross Weight'))) {
+                            // Check for specific OVERALL SUMMARY pattern and other summary indicators
+                            if (hasHeading && (text.includes('Summary') || text.includes('SUMMARY') || 
+                                text.includes('OVERALL SUMMARY') || text.includes('📊 OVERALL') || 
+                                text.includes('Total Records') || text.includes('Total Coils') || 
+                                text.includes('Total Gross Weight') || text.includes('Total Vessels'))) {
                                 if (!summaryDivs.includes(div)) {
                                     summaryDivs.push(div);
                                 }
@@ -5942,95 +5958,44 @@ Data is currently saved locally and will sync once Web App is configured.`);
                         
                         summaryDivs.forEach(div => {
                             const summaryTitle = div.querySelector('h4');
-                            if (summaryTitle && (summaryTitle.textContent.includes('Summary') || summaryTitle.textContent.includes('SUMMARY') || summaryTitle.textContent.includes('OVERALL'))) {
+                            if (summaryTitle && (summaryTitle.textContent.includes('Summary') || summaryTitle.textContent.includes('SUMMARY') || summaryTitle.textContent.includes('OVERALL') || summaryTitle.textContent.includes('📊 OVERALL'))) {
                                 // Check if we need a new page
-                                if (yPosition > doc.internal.pageSize.height - 40) {
+                                if (yPosition > doc.internal.pageSize.height - 60) {
                                     doc.addPage();
                                     yPosition = 15;
                                 }
                                 
-                                // Add summary section header with matching HTML style - increased font size
+                                // Count summary paragraphs to determine box height
+                                const summaryParagraphs = div.querySelectorAll('p');
+                                const summaryHeight = 15 + (summaryParagraphs.length * 6); // Dynamic height based on content
+                                
+                                // Add light gray background box like HTML
+                                doc.setFillColor(236, 240, 241); // #ecf0f1 color
+                                doc.roundedRect(20, yPosition - 5, pageWidth - 40, summaryHeight, 3, 3, 'F');
+                                
+                                // Add summary title with dark color
                                 doc.setFontSize(13);
                                 doc.setFont(undefined, 'bold');
+                                doc.setTextColor(44, 62, 80); // #2c3e50 color
+                                const cleanTitle = summaryTitle.textContent.replace('📊', '').trim();
+                                doc.text(cleanTitle, 25, yPosition + 5);
+                                yPosition += 12;
                                 
-                                // Use different colors based on summary type
-                                if (summaryTitle.textContent.includes('OVERALL')) {
-                                    // Add extra gap before OVERALL SUMMARY
-                                    yPosition += 8;
-                                    doc.setTextColor(0, 0, 0); // Black text for overall summary
-                                    // Add dark background rectangle for overall summary
-                                    doc.setFillColor(44, 62, 80);
-                                    doc.rect(20, yPosition - 8, pageWidth - 40, 20, 'F');
-                                    // Remove chart emoji from title
-                                    const cleanTitle = summaryTitle.textContent.replace('📊', '').trim();
-                                    doc.text(cleanTitle, centerX, yPosition, { align: 'center' });
-                                } else {
-                                    doc.setTextColor(44, 62, 80); // Dark blue for regular summaries
-                                    // Remove chart emoji from title for regular summaries too
-                                    const cleanTitle = summaryTitle.textContent.replace('📊', '').trim();
-                                    doc.text(cleanTitle, 20, yPosition);
-                                }
-                                
-                                yPosition += 10;
-                                
-                                // Add summary details - set black color for visibility and increased font size
+                                // Add summary content with black text
                                 doc.setFontSize(11);
                                 doc.setFont(undefined, 'normal');
-                                doc.setTextColor(0, 0, 0); // Black text for visibility
+                                doc.setTextColor(0, 0, 0);
                                 
-                                // Handle flex layout summaries (like overall summary)
-                                const flexDiv = div.querySelector('div[style*="display: flex"]');
-                                if (flexDiv) {
-                                    const summaryItems = flexDiv.querySelectorAll('div');
-                                    let xPos = 20;
-                                    const itemWidth = (pageWidth - 40) / Math.max(summaryItems.length, 1);
-                                    
-                                    summaryItems.forEach((item, index) => {
-                                        const text = item.textContent.trim();
-                                        if (text) {
-                                            // Set black text color for visibility
-                                            doc.setTextColor(0, 0, 0);
-                                            
-                                            // Handle structured data better
-                                            const lines = text.split('\n').filter(line => line.trim());
-                                            let maxLines = 0;
-                                            
-                                            lines.forEach((line, lineIndex) => {
-                                                const cleanLine = line.trim();
-                                                if (cleanLine) {
-                                                    // Wrap text if too long
-                                                    const wrappedLines = doc.splitTextToSize(cleanLine, itemWidth - 10);
-                                                    wrappedLines.forEach((wrappedLine, wrapIndex) => {
-                                                        doc.text(wrappedLine, xPos + (itemWidth * index), yPosition + ((lineIndex + wrapIndex) * 5), { 
-                                                            align: 'left'
-                                                        });
-                                                    });
-                                                    maxLines = Math.max(maxLines, lineIndex + wrappedLines.length);
-                                                }
-                                            });
-                                        }
-                                    });
-                                    yPosition += Math.max(20, maxLines * 5 + 10);
-                                } else {
-                                    // Handle regular paragraph summaries and other content
-                                    const summaryParagraphs = div.querySelectorAll('p, div:not([style*="display: flex"])');
-                                    summaryParagraphs.forEach(p => {
-                                        const text = p.textContent.trim();
-                                        if (text && !text.includes('📊')) { // Skip emoji-only content
-                                            // Set black text color for visibility
-                                            doc.setTextColor(0, 0, 0);
-                                            
-                                            // Wrap long text properly
-                                            const wrappedLines = doc.splitTextToSize(text, pageWidth - 40);
-                                            wrappedLines.forEach((line, lineIndex) => {
-                                                doc.text(line, 20, yPosition + (lineIndex * 6));
-                                            });
-                                            yPosition += (wrappedLines.length * 6) + 3;
-                                        }
-                                    });
-                                }
+                                // Handle summary paragraphs with proper spacing
+                                summaryParagraphs.forEach(p => {
+                                    const text = p.textContent.trim();
+                                    if (text && !text.includes('📊')) {
+                                        doc.text(text, 25, yPosition);
+                                        yPosition += 6;
+                                    }
+                                });
                                 
-                                yPosition += 10; // Extra gap after summary
+                                yPosition += 10; // Extra gap after summary box
                             }
                         });
                     } else {
