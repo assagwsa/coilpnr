@@ -1104,7 +1104,11 @@
 </head>
 <body>
     <div class="header-title">
-        <h1>A.S.Shipping Agencies Pvt Ltd,<br>(Greenways Group) - V: 4.1</h1>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0 20px;">
+            <img src="./assa_logo.png" alt="ASSA Logo" style="height: 50px; width: auto;">
+            <h1 style="margin: 0; text-align: center; flex-grow: 1;">A.S.Shipping Agencies Pvt Ltd,<br>(Greenways Group) - V: 4.1</h1>
+            <img src="./gwsa_logo.png" alt="GWSA Logo" style="height: 50px; width: auto;">
+        </div>
     </div>
 
     <div class="container">
@@ -5474,15 +5478,34 @@ Data is currently saved locally and will sync once Web App is configured.`);
                         tables.forEach((table, tableIndex) => {
                             if (tableIndex > 0) yPosition += 10;
                             
-                            // Add vessel name detection for view function too
+                            // Add vessel name detection for view function - find the vessel name specific to this table
                             let vesselName = '';
-                            const allTextContent = modalContent.textContent;
                             
-                            // Search for vessel name in modal content
-                            const vesselPattern = /M\.V\.\s*[A-Z\s\d\.]+|V\.\d+[A-Z]*\w*/gi;
-                            const matches = allTextContent.match(vesselPattern);
-                            if (matches && matches.length > 0) {
-                                vesselName = matches[0].trim();
+                            // Look for vessel name in the sibling elements before this table
+                            let currentElement = table;
+                            while (currentElement && !vesselName) {
+                                currentElement = currentElement.previousElementSibling;
+                                if (currentElement && currentElement.textContent) {
+                                    const text = currentElement.textContent;
+                                    // Handle both formats: "Vessel Name : M.V. SHIP" and "🚢 M.V. SHIP"
+                                    if (text.includes('Vessel Name :')) {
+                                        vesselName = text.replace('Vessel Name :', '').trim();
+                                        console.log('Found vessel name from sibling:', text);
+                                        break;
+                                    } else if (text.includes('🚢')) {
+                                        vesselName = text.replace('🚢', '').trim();
+                                        console.log('Found vessel name from sibling:', text);
+                                        break;
+                                    } else if (text.includes('M.V.')) {
+                                        // Handle cases where vessel name is directly in header without prefix
+                                        const vesselMatch = text.match(/M\.V\.\s*[A-Z0-9\s\.]+/i);
+                                        if (vesselMatch) {
+                                            vesselName = vesselMatch[0].trim();
+                                            console.log('Found vessel name from sibling:', text);
+                                            break;
+                                        }
+                                    }
+                                }
                             }
                             
                             // Add vessel name if found
@@ -5491,7 +5514,7 @@ Data is currently saved locally and will sync once Web App is configured.`);
                                 doc.setFont(undefined, 'bold');
                                 doc.setTextColor(0, 0, 0);
                                 const cleanVesselName = vesselName.replace('🚢', '').trim();
-                                doc.text(cleanVesselName, centerX, yPosition, { align: 'center' });
+                                doc.text(`Vessel Name: ${cleanVesselName}`, centerX, yPosition, { align: 'center' });
                                 yPosition += 8;
                             }
                             
