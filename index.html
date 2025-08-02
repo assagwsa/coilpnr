@@ -1106,11 +1106,9 @@
             position: fixed;
             top: 10px;
             right: 10px;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
             z-index: 10000;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
             transition: all 0.3s ease;
@@ -1162,18 +1160,16 @@
 </head>
 <body>
     <!-- Online/Offline Status Indicator -->
-    <div id="statusIndicator" class="status-indicator status-online">
-        Online
-    </div>
+    <div id="statusIndicator" class="status-indicator status-online"></div>
 
     <!-- App Freeze Overlay -->
     <div id="appFreezeOverlay" class="app-freeze-overlay"></div>
 
     <div class="header-title">
         <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0 20px;">
-            <img src="./assa_logo.png" alt="ASSA Logo" style="height: 60px; width: auto;">
-            <h1 style="margin: 0; text-align: center; flex-grow: 1;">A.S.Shipping Agencies P Ltd,<br>(Greenways Group)</h1>
-            <img src="./gwsa_logo.png" alt="GWSA Logo" style="height: 60px; width: auto;">
+            <img src="./assa_logo.png" alt="ASSA Logo" style="height: 70px; width: auto;">
+            <h1 style="margin: 0; text-align: center; flex-grow: 1; font-size: 1.4rem;">A.S.Shipping Agencies P Ltd,<br>(Greenways Group)</h1>
+            <img src="./gwsa_logo.png" alt="GWSA Logo" style="height: 70px; width: auto;">
         </div>
     </div>
 
@@ -2928,7 +2924,7 @@ Data is currently saved locally and will sync once Web App is configured.`);
             
             try {
                 // Auto-configure Google API key and Web App URL from environment
-                const apiKeyFromEnv = 'AIzaSyCpDuukRyxNbcOXQ02WrQq9GyCOXFP_9fM';
+                const apiKeyFromEnv = 'AIzaSyDqeULE4BxDPF3HT2O9oBp4wpRdgF7YPt8';
                 const webAppUrlFromEnv = 'https://script.google.com/macros/s/AKfycbyc5XDyRgzEqwNltu7a8wGOmtPWPkAQff8hKuyc30TD2WXTdal5UV4MlXpAnK-NBDbR/exec';
                 
                 if (apiKeyFromEnv && !apiKeyFromEnv.includes('${') && apiKeyFromEnv.length > 10) {
@@ -7279,7 +7275,6 @@ Current status: ${window.googleSheetsAPI.getCredentials().webAppUrl ? 'URL confi
             if (isOnline) {
                 // Online state
                 statusIndicator.className = 'status-indicator status-online';
-                statusIndicator.textContent = 'Online';
                 
                 // Remove freeze
                 body.classList.remove('app-frozen');
@@ -7288,7 +7283,6 @@ Current status: ${window.googleSheetsAPI.getCredentials().webAppUrl ? 'URL confi
             } else {
                 // Offline state
                 statusIndicator.className = 'status-indicator status-offline';
-                statusIndicator.textContent = 'Offline';
                 
                 // Apply freeze
                 body.classList.add('app-frozen');
